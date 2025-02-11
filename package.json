@@ -9,8 +9,8 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "@elysiajs/cors": "^1.2.0",
     "elysia": "^1.2.12",
+    "@elysiajs/cors": "^1.2.0",
     "html-escaper": "^3.0.3"
   }
 }
