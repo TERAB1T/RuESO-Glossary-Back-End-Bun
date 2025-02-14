@@ -1,7 +1,6 @@
 import { Elysia } from "elysia";
-import { cors } from '@elysiajs/cors'
-import { validateGames } from "./utils";
-import { searchTerm } from "./db/db_search";
+import { cors } from '@elysiajs/cors';
+import { GlossarySearch } from "./glossary/_search";
 
 const app = new Elysia()
   .use(cors({
@@ -13,32 +12,8 @@ const app = new Elysia()
     ],
   }))
   .get("/search", async ({ query }) => {
-    const draw = query.draw || "1";
-    const start = Number(query.start) || 0;
-    const length = Number(query.length) || 10;
-    const searchValue = query["search[value]"] || "";
-    const orderColumnIndex = query["order[0][column]"];
-    const orderDir = query["order[0][dir]"]?.toUpperCase() || "ASC";
-    const games = query.games ? query.games.split(",") : [];
-
-    const filters = [
-      query["columns[0][search][value]"],
-      query["columns[1][search][value]"],
-      query["columns[2][search][value]"],
-      query["columns[3][search][value]"],
-    ];
-
-    const columns = ["game", "type", "en", "ru"];
-    const orderColumn = orderColumnIndex !== undefined ? columns[Number(orderColumnIndex)] : null;
-
-    const result = searchTerm(searchValue, start, length, orderColumn, orderDir, validateGames(games), filters);
-
-    return {
-      draw,
-      recordsTotal: result.recordsTotal,
-      recordsFiltered: result.recordsFiltered,
-      data: result.data,
-    };
+    const glossarySearch = new GlossarySearch(query);
+    return await glossarySearch.searchTerm();
   })
   .listen(8000);
 
