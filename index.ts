@@ -1,20 +1,70 @@
 import { Elysia } from "elysia";
 import { cors } from '@elysiajs/cors';
+import { isInteger, parseIds } from "./utils";
+
 import { GlossarySearch } from "./glossary/_search";
+import { Categories } from "./library/_categories";
+import { Books } from "./library/_books";
 
 const app = new Elysia()
-  .use(cors({
-    origin: [
-      "http://rueso.ru",
-      "https://rueso.ru",
-      "http://127.0.0.1",
-      "http://127.0.0.1:5500",
-    ],
-  }))
-  .get("/search", async ({ query }) => {
-    const glossarySearch = new GlossarySearch(query);
-    return await glossarySearch.searchTerm();
-  })
-  .listen(8000);
+	.use(cors({
+		origin: [
+			"http://rueso.ru",
+			"https://rueso.ru",
+			"http://127.0.0.1",
+			"http://127.0.0.1:5500",
+		],
+	}))
+
+	.get("/glossary", async ({ query }) => {
+		const glossarySearch = new GlossarySearch(query);
+		return await glossarySearch.searchTerm();
+	})
+
+	.get("/library/categories", async () => {
+		const categories = new Categories();
+		return await categories.getCategories();
+	})
+
+	.get("/library/categories/:category_id", async ({ params, query }) => {
+		const categories = new Categories();
+
+		const categoryId = params.category_id;
+		let page: any = query.page;
+		let pageSize: any = query.page_size;
+
+		if (!isInteger(page)) page = 1;
+		if (!isInteger(pageSize)) pageSize = 50;
+
+		if (!isInteger(categoryId)) return {};
+
+		return await categories.getCategory(parseInt(categoryId), parseInt(page), parseInt(pageSize));
+	})
+
+	.get('/library/books', async ({ query }) => {
+        const books = new Books();
+
+        let page: any = query.page;
+        let pageSize: any = query.page_size;
+        const ids: number[] = parseIds(query.ids);
+
+        if (!isInteger(page)) page = 1;
+        if (!isInteger(pageSize)) pageSize = 50;
+
+        if (ids.length) return await books.getBooksWithIds(ids);
+
+        return await books.getBooks(parseInt(page), parseInt(pageSize));
+    })
+
+	.get('/library/books/:book_id', async ({ params }) => {
+        const books = new Books();
+
+        const bookId = params.book_id;
+        if (!isInteger(bookId)) return {};
+
+        return await books.getBook(parseInt(bookId));
+    })
+
+	.listen(8000);
 
 console.log(`Server running on http://localhost:8000`);
