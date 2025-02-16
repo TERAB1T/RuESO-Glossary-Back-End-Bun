@@ -29,8 +29,8 @@ export class Categories {
 			pagination: {
 				page,
 				page_size: pageSize,
-				total_books: books.length,
-				total_pages: Math.ceil(books.length / pageSize)
+				total_books: totalBooks,
+				total_pages: Math.ceil(totalBooks / pageSize)
 			}
 		};
 	}
