@@ -19,7 +19,7 @@ export class Categories {
 
 		if (!category) return {};
 
-		const books = this.#db.query(`SELECT id, titleEn, titleRu, icon, slug FROM ${TABLE_NAME_BOOKS} WHERE catId = ? ORDER BY titleRu ASC LIMIT ? OFFSET ?`).all(category.id, pageSize, offset);
+		const books = this.#db.query(`SELECT id, titleEn, titleRu, icon, slug FROM ${TABLE_NAME_BOOKS} WHERE catId = ? ORDER BY orderId ASC LIMIT ? OFFSET ?`).all(category.id, pageSize, offset);
 
 		const totalBooks = this.#db.query(`SELECT COUNT(*) AS count FROM ${TABLE_NAME_BOOKS} WHERE catId = ?`).get(category.id).count;
 

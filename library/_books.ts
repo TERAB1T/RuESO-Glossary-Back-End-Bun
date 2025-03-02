@@ -12,7 +12,7 @@ export class Books {
 		const offset: number = (page - 1) * pageSize;
 
 		const books = this.#db.query(
-            `SELECT id, titleEn, titleRu, icon, slug FROM ${TABLE_NAME_BOOKS} ORDER BY titleRu ASC LIMIT ? OFFSET ?`
+            `SELECT id, titleEn, titleRu, icon, slug FROM ${TABLE_NAME_BOOKS} ORDER BY orderId ASC LIMIT ? OFFSET ?`
         ).all(pageSize, offset);
         const totalBooks = this.#db.query(`SELECT COUNT(*) AS count FROM ${TABLE_NAME_BOOKS}`).get().count;
 
@@ -31,7 +31,7 @@ export class Books {
         const placeholders = ids.map(() => "?").join(",");
 
         return this.#db.query(
-            `SELECT id, titleEn, titleRu, icon, slug FROM ${TABLE_NAME_BOOKS} WHERE id IN (${placeholders}) ORDER BY titleRu ASC`
+            `SELECT id, titleEn, titleRu, icon, slug FROM ${TABLE_NAME_BOOKS} WHERE id IN (${placeholders}) ORDER BY orderId ASC`
         ).all(...ids);
     }
 
