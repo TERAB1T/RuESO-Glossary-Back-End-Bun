@@ -14,7 +14,7 @@ export class Books {
 		const books = this.#db.query(
             `SELECT id, titleEn, titleRu, icon, slug FROM ${TABLE_NAME_BOOKS} WHERE catId != 2000 ORDER BY orderId ASC LIMIT ? OFFSET ?`
         ).all(pageSize, offset);
-        const totalBooks = this.#db.query(`SELECT COUNT(*) AS count FROM ${TABLE_NAME_BOOKS}`).get().count;
+        const totalBooks = this.#db.query(`SELECT COUNT(*) AS count FROM ${TABLE_NAME_BOOKS} WHERE catId != 2000`).get().count;
 
 		return {
             books,
