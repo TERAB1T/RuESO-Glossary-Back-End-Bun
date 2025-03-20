@@ -6,8 +6,8 @@ import { GlossarySearch } from "./glossary/_search";
 import { Categories } from "./library/_categories";
 import { Books } from "./library/_books";
 
-// const isWindows = process.platform === 'win32';
-// const SOCKET_PATH = '/tmp/apiRueso.sock';
+ const isWindows = process.platform === 'win32';
+ const SOCKET_PATH = '/tmp/apiRueso.sock';
 
 const app = new Elysia()
 	.use(cors({
@@ -68,8 +68,8 @@ const app = new Elysia()
         return await books.getBook(parseInt(bookId));
     })
 
-	.listen(8000);
-	//.listen(isWindows ? { port: 8000 } : { unix: SOCKET_PATH });
+	//.listen(8000);
+	.listen(isWindows ? { port: 8000 } : { unix: SOCKET_PATH });
 
 	console.log(`Server running on http://localhost:8000`);
 	//console.log(isWindows
