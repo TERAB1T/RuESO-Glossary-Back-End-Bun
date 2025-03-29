@@ -4,6 +4,7 @@ import { isInteger, parseIds } from "./utils";
 
 import { GlossarySearch } from "./glossary/_search";
 import { Categories } from "./library/_categories";
+import { Patches } from "./library/_patches";
 import { Books } from "./library/_books";
 
 const isWindows = process.platform === 'win32';
@@ -43,6 +44,24 @@ const app = new Elysia()
 		if (!isInteger(categoryId)) return {};
 
 		return await categories.getCategory(parseInt(categoryId), parseInt(page), parseInt(pageSize));
+	})
+
+	.get("/library/patches", async () => {
+		const patches = new Patches();
+		return await patches.getPatches();
+	})
+
+	.get("/library/patches/:patch_version", async ({ params, query }) => {
+		const patches = new Patches();
+
+		const patchVersion = params.patch_version;
+		let page: any = query.page;
+		let pageSize: any = query.page_size;
+
+		if (!isInteger(page)) page = 1;
+		if (!isInteger(pageSize)) pageSize = 50;
+
+		return await patches.getPatch(patchVersion, parseInt(page), parseInt(pageSize));
 	})
 
 	.get('/library/books', async ({ query }) => {
