@@ -1,5 +1,5 @@
 import { Database } from "bun:sqlite";
-import { DB_PATH, TABLE_NAME_BOOKS, TABLE_NAME_CATEGORIES } from "../library/constants";
+import { DB_PATH, TABLE_NAME_BOOKS, TABLE_NAME_CATEGORIES, TABLE_NAME_PATCHES } from "../library/constants";
 
 export class Books {
 	#db: Database;
@@ -39,10 +39,24 @@ export class Books {
         const book = this.#db.query(`SELECT * FROM ${TABLE_NAME_BOOKS} WHERE id = ?`).get(bookId);
         if (!book) return {};
 
+        const isSameVersion = book.created === book.updated;
+
         const category = this.#db.query(
             `SELECT id, titleEn, titleRu, icon, slug FROM ${TABLE_NAME_CATEGORIES} WHERE id = ?`
         ).get(book.catId);
 
-        return { ...book, category: category || {} };
+        const created = this.#db.query(
+            `SELECT version, nameEn, nameRu, date, slug FROM ${TABLE_NAME_PATCHES} WHERE version = ?`
+        ).get(book.created);
+
+        if (isSameVersion) {
+            return { ...book, category: category || {}, created: created || {}, updated: created || {} };
+        }
+
+        const updated = this.#db.query(
+            `SELECT version, nameEn, nameRu, date, slug FROM ${TABLE_NAME_PATCHES} WHERE version = ?`
+        ).get(book.updated);
+
+        return { ...book, category: category || {}, created: created || {}, updated: updated || {} };
     }
 }
