@@ -37,13 +37,14 @@ const app = new Elysia()
 		const categoryId = params.category_id;
 		let page: any = query.page;
 		let pageSize: any = query.page_size;
+		let filter: any = query.filter;
 
 		if (!isInteger(page)) page = 1;
 		if (!isInteger(pageSize)) pageSize = 50;
 
 		if (!isInteger(categoryId)) return {};
 
-		return await categories.getCategory(parseInt(categoryId), parseInt(page), parseInt(pageSize));
+		return await categories.getCategory(parseInt(categoryId), parseInt(page), parseInt(pageSize), filter);
 	})
 
 	.get("/library/patches", async () => {
@@ -57,11 +58,12 @@ const app = new Elysia()
 		const patchVersion = params.patch_version;
 		let page: any = query.page;
 		let pageSize: any = query.page_size;
+		let filter: any = query.filter;
 
 		if (!isInteger(page)) page = 1;
 		if (!isInteger(pageSize)) pageSize = 50;
 
-		return await patches.getPatch(patchVersion, parseInt(page), parseInt(pageSize));
+		return await patches.getPatch(patchVersion, parseInt(page), parseInt(pageSize), filter);
 	})
 
 	.get('/library/books', async ({ query }) => {
@@ -70,13 +72,14 @@ const app = new Elysia()
         let page: any = query.page;
         let pageSize: any = query.page_size;
         const ids: number[] = parseIds(query.ids);
+		let filter: any = query.filter;
 
         if (!isInteger(page)) page = 1;
         if (!isInteger(pageSize)) pageSize = 50;
 
         if (ids.length) return await books.getBooksWithIds(ids);
 
-        return await books.getBooks(parseInt(page), parseInt(pageSize));
+        return await books.getBooks(parseInt(page), parseInt(pageSize), filter);
     })
 
 	.get('/library/books/:book_id', async ({ params }) => {
