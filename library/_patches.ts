@@ -1,5 +1,5 @@
 import { Database } from "bun:sqlite";
-import { DB_PATH, TABLE_NAME_BOOKS, TABLE_NAME_PATCHES } from "./constants";
+import { DB_PATH, TABLE_NAME_BOOKS, TABLE_NAME_PATCHES, TABLE_NAME_CATEGORIES } from "./constants";
 import { escapeQuery } from "../utils";
 
 export class Patches {
@@ -27,11 +27,11 @@ export class Patches {
 			filter = escapeQuery(filter);
 
 			books = this.#db.query(
-                `SELECT b.id, b.titleEn, b.titleRu, b.icon, b.slug
+                `SELECT b.id, b.titleEn, b.titleRu, b.icon, b.slug, b.catId
                 FROM ${TABLE_NAME_BOOKS} b
                 JOIN books_fts ON books_fts.id = b.id
                 WHERE books_fts MATCH ? AND created = ?
-                ORDER BY orderId ASC
+                ORDER BY orderCatId ASC
                 LIMIT ? OFFSET ?`
             ).all(filter, patchVersion, pageSize, offset);
 
@@ -44,10 +44,10 @@ export class Patches {
 
 		} else {
 			books = this.#db.query(
-				`SELECT id, titleEn, titleRu, icon, slug
+				`SELECT id, titleEn, titleRu, icon, slug, catId
 				FROM ${TABLE_NAME_BOOKS}
 				WHERE created = ?
-				ORDER BY orderId ASC
+				ORDER BY orderCatId ASC
 				LIMIT ? OFFSET ?`
 			).all(patchVersion, pageSize, offset);
 
@@ -58,9 +58,23 @@ export class Patches {
 			).get(patchVersion) as { count: number }).count;
 		}
 
+		const catIds = [...new Set(books.map(book => book.catId))];
+		let categories: any[] = [];
+
+		if (catIds.length !== 0) {
+			const catPlaceholders = catIds.map(() => "?").join(",");
+			categories = this.#db.query(
+				`SELECT id, titleRu
+				FROM ${TABLE_NAME_CATEGORIES}
+				WHERE id IN (${catPlaceholders})
+				ORDER BY orderId ASC`
+			).all(...catIds);
+		}
+
 		return {
 			...patch,
 			books,
+			categories,
 			pagination: {
 				page,
 				page_size: pageSize,

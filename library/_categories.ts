@@ -10,7 +10,7 @@ export class Categories {
 	}
 
 	async getCategories() {
-		return this.#db.query(`SELECT id, titleEn, titleRu, icon, slug FROM ${TABLE_NAME_CATEGORIES} ORDER BY titleRu ASC`).all();
+		return this.#db.query(`SELECT id, titleEn, titleRu, icon, slug FROM ${TABLE_NAME_CATEGORIES} ORDER BY orderId ASC`).all();
 	}
 
 	async getCategory(categoryId: number, page: number, pageSize: number, filter?: string) {
