@@ -83,14 +83,25 @@ export class Books {
             `SELECT version, nameEn, nameRu, date, slug FROM ${TABLE_NAME_PATCHES} WHERE version = ?`
         ).get(book.created);
 
+
+        let group = [];
+
+        if (book.groupIds) {
+            const groupIds = book.groupIds.split(',').map(id => parseInt(id));
+            group = this.#db.query(`SELECT id, titleRu, icon, slug FROM ${TABLE_NAME_BOOKS} WHERE id IN (${groupIds.map(() => "?").join(",")})`).all(...groupIds);
+            group.sort((a, b) => groupIds.indexOf(a.id) - groupIds.indexOf(b.id));
+        }
+        delete book.groupIds;
+
+
         if (isSameVersion) {
-            return { ...book, category: category || {}, created: created || {}, updated: created || {} };
+            return { ...book, category: category || {}, group, created: created || {}, updated: created || {} };
         }
 
         const updated = this.#db.query(
             `SELECT version, nameEn, nameRu, date, slug FROM ${TABLE_NAME_PATCHES} WHERE version = ?`
         ).get(book.updated);
 
-        return { ...book, category: category || {}, created: created || {}, updated: updated || {} };
+        return { ...book, category: category || {}, group, created: created || {}, updated: updated || {} };
     }
 }
