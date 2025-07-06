@@ -10,7 +10,7 @@ export class Patches {
 	}
 
 	async getPatches() {
-		return this.#db.query(`SELECT version, nameEn, nameRu, slug FROM ${TABLE_NAME_PATCHES} ORDER BY id DESC`).all();
+		return this.#db.query(`SELECT version, nameEn, nameRu, date, slug FROM ${TABLE_NAME_PATCHES} ORDER BY id DESC`).all();
 	}
 
 	async getPatch(patchVersion: string, page: number, pageSize: number, filter?: string) {
