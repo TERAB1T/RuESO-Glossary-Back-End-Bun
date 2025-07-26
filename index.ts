@@ -1,11 +1,14 @@
 import { Elysia } from "elysia";
 import { cors } from '@elysiajs/cors';
-import { isInteger, parseIds } from "./utils";
+import { isInteger, parseIds, getFileLastModifiedDate } from "./utils";
 
 import { GlossarySearch } from "./glossary/_search";
 import { Categories } from "./library/_categories";
 import { Patches } from "./library/_patches";
 import { Books } from "./library/_books";
+
+import { DB_PATH as LIBRARY_DB_PATH} from "./library/constants";
+import { DB_PATH as GLOSSARY_DB_PATH } from "./glossary/constants";
 
 const isWindows = process.platform === 'win32';
 const SOCKET_PATH = '/tmp/apiRueso.sock';
@@ -90,6 +93,16 @@ const app = new Elysia()
 
         return await books.getBook(parseInt(bookId));
     })
+
+	.get("/library/updated", async () => {
+		const lastModified = await getFileLastModifiedDate(LIBRARY_DB_PATH);
+		return { lastModified };
+	})
+
+	.get("/glossary/updated", async () => {
+		const lastModified = await getFileLastModifiedDate(GLOSSARY_DB_PATH);
+		return { lastModified };
+	})
 
 	//.listen(8000);
 	.listen(isWindows ? { port: 8000 } : { unix: SOCKET_PATH });
