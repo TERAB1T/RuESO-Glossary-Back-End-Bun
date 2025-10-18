@@ -124,7 +124,7 @@ export class GlossarySearch {
 
         if (this.#games.length) {
             queryConditions.push(`${TABLE_NAME} MATCH ?`);
-            params.push(this.#games.map(game => `game:^${game}`).join(' OR '));
+            params.push(this.#games.map(game => `game:^${game.replace(" ", "")}`).join(' OR '));
         }
 
         if (queryConditions.length) {
