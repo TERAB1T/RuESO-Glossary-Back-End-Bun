@@ -5,4 +5,4 @@ export const TABLE_NAME = 'glossary';
 export const COLUMNS = ['game', 'type', 'en', 'ru'];
 
 export const TES_VALID_GAMES = ['eso', 'skyrim', 'oblivion', 'morrowind', 'legends', 'blades', 'castles', 'redguard', 'battlespire', 'travels', 'arena', 'daggerfall'];
-export const FALLOUT_VALID_GAMES = ['new vegas', 'shelter', 'fallout 76'];
+export const FALLOUT_VALID_GAMES = ['fallout 3', 'new vegas', 'fallout 4', 'shelter', 'fallout 76'];
