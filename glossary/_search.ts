@@ -1,5 +1,7 @@
 import { Database } from "bun:sqlite";
-import { COLUMNS, VALID_GAMES, DB_PATH, TABLE_NAME } from "../glossary/constants";
+import { COLUMNS, TABLE_NAME,
+	TES_VALID_GAMES, TES_DB_PATH,
+	FALLOUT_VALID_GAMES, FALLOUT_DB_PATH } from "../glossary/constants";
 import { prepareHtml } from "../utils";
 
 export class GlossarySearch {
@@ -13,7 +15,20 @@ export class GlossarySearch {
     #orderColumnIndex: number | null;
     #orderColumn: string | null;
 
-    constructor(query) {
+	#dbPath: string;
+	#validGames: string[];
+
+
+    constructor(query, game: string) {
+
+		if (game === 'fallout') {
+			this.#dbPath = FALLOUT_DB_PATH;
+			this.#validGames = FALLOUT_VALID_GAMES;
+		} else {
+			this.#dbPath = TES_DB_PATH;
+			this.#validGames = TES_VALID_GAMES;
+		}
+
         this.#draw = query.draw || '1';
         this.#start = parseInt(query.start || 0);
         this.#length = parseInt(query.length || 10);
@@ -31,7 +46,7 @@ export class GlossarySearch {
     }
 
     #validateGames(games: string[]): string[] {
-        return Array.from(new Set(games).intersection(new Set(VALID_GAMES)));
+        return Array.from(new Set(games).intersection(new Set(this.#validGames)));
     }
 
     #escapeQuery(query: string): string {
@@ -41,7 +56,7 @@ export class GlossarySearch {
     }
 
     async searchTerm() {
-        const db = new Database(DB_PATH);
+        const db = new Database(this.#dbPath);
 
         const startTime = Date.now();
         const { query, params } = this.#buildQuery();

@@ -8,7 +8,8 @@ import { Patches } from "./library/_patches";
 import { Books } from "./library/_books";
 
 import { DB_PATH as LIBRARY_DB_PATH} from "./library/constants";
-import { DB_PATH as GLOSSARY_DB_PATH } from "./glossary/constants";
+import { TES_DB_PATH as GLOSSARY_TES_DB_PATH } from "./glossary/constants";
+import { FALLOUT_DB_PATH as GLOSSARY_FALLOUT_DB_PATH } from "./glossary/constants";
 
 const isWindows = process.platform === 'win32';
 const SOCKET_PATH = '/tmp/apiRueso.sock';
@@ -24,8 +25,13 @@ const app = new Elysia()
 		],
 	}))
 
-	.get("/glossary", async ({ query }) => {
-		const glossarySearch = new GlossarySearch(query);
+	.get("/glossary/tes", async ({ query }) => {
+		const glossarySearch = new GlossarySearch(query, "tes");
+		return await glossarySearch.searchTerm();
+	})
+
+	.get("/glossary/fallout", async ({ query }) => {
+		const glossarySearch = new GlossarySearch(query, "fallout");
 		return await glossarySearch.searchTerm();
 	})
 
@@ -99,8 +105,13 @@ const app = new Elysia()
 		return { lastModified };
 	})
 
-	.get("/glossary/updated", async () => {
-		const lastModified = await getFileLastModifiedDate(GLOSSARY_DB_PATH);
+	.get("/glossary/tes/updated", async () => {
+		const lastModified = await getFileLastModifiedDate(GLOSSARY_TES_DB_PATH);
+		return { lastModified };
+	})
+
+	.get("/glossary/fallout/updated", async () => {
+		const lastModified = await getFileLastModifiedDate(GLOSSARY_FALLOUT_DB_PATH);
 		return { lastModified };
 	})
 
