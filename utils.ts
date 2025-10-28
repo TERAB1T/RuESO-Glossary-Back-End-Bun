@@ -12,7 +12,7 @@ export function prepareHtml(str: string | null): string {
 	if (!str) {
 		return "";
 	}
-	return escape(str).replace(/\n/g, "<br>");
+	return escape(str).replace(/(\r\n|\n|\r)/g, "<br>");
 }
 
 export function isInteger(value: unknown): boolean {
