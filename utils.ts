@@ -1,5 +1,3 @@
-
-import { VALID_GAMES } from "./glossary/constants";
 import { escape } from "html-escaper";
 
 export function escapeQuery(query: string): string {
@@ -27,6 +25,10 @@ export function isInteger(value: unknown): boolean {
 	return false;
 }
 
+export function isHex(value: any): boolean {
+	return typeof value === 'string' && /^[0-9a-f]+$/i.test(value);
+}
+
 export function parseIds(ids: unknown): number[] {
 	if (typeof ids === "string" && /^[\d,]+$/.test(ids)) {
 		return ids.split(",").filter(x => x !== "").map(Number);
@@ -43,4 +45,19 @@ export async function getFileLastModifiedDate(path: string): Promise<string> {
 		month: "2-digit",
 		year: "numeric"
 	}).format(timestamp);
+}
+
+export function getF76AtxOrderClause(order: string): string {
+	switch (order) {
+		case "date_desc":
+			return "ORDER BY orderByFormId DESC";
+		case "date_asc":
+			return "ORDER BY orderByFormId ASC";
+		case "name_desc":
+			return "ORDER BY orderByName DESC";
+		case "name_asc":
+			return "ORDER BY orderByName ASC";
+		default:
+			return "ORDER BY orderByFormId DESC";
+	}
 }
