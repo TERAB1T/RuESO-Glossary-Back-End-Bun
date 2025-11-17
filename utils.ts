@@ -1,7 +1,7 @@
 import { escape } from "html-escaper";
 
 export function escapeQuery(query: string): string {
-	let escaped = query.replace(/"/g, '""').replace(/ /g, ' ');
+	let escaped = decodeURIComponent(query).replace(/"/g, '""').replace(/ /g, ' ');
 	escaped = escaped.replace(/[‘’]/g, "'").replace(/[“”„]/g, '""');
 	return `"${escaped}"`;
 }
