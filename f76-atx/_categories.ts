@@ -46,7 +46,9 @@ export class Categories {
 		page: number,
 		pageSize: number,
 		filter: string,
-		order: string
+		order: string,
+		isPTS?: boolean,
+		hasSupport?: boolean
 	): Promise<CategoryItemsResponse | null> {
 		const offset = (page - 1) * pageSize;
 
@@ -56,44 +58,55 @@ export class Categories {
 
 		if (!category) return null;
 
-		let items: Item[] = [];
-		let totalItems = 0;
+		const conditions: string[] = [];
+		const params: any[] = [];
 
+		const useFilter = filter && filter.length > 2;
+		const baseTable = useFilter ? 'items_fts' : TABLE_NAME_ITEMS;
+
+		if (useFilter) {
+			const escapedFilter = escapeQuery(filter);
+			conditions.push(`${baseTable} MATCH ?`);
+			params.push(escapedFilter);
+		}
+
+		conditions.push('i.categoryFormId = ?');
+		params.push(categoryFormId);
+
+		if (isPTS === true) {
+			conditions.push('i.isPTS = 1');
+		}
+
+		if (hasSupport === true) {
+			conditions.push('(i.supportItem IS NOT NULL OR i.supportBundles IS NOT NULL)');
+		}
+
+		const whereClause = `WHERE ${conditions.join(' AND ')}`;
 		const orderClause = getF76AtxOrderClause(order);
 
-		if (filter && filter.length > 2) {
-			const escapedFilter = escapeQuery(filter);
+		// Main query
+		const fromClause = useFilter
+			? `FROM ${TABLE_NAME_ITEMS} i JOIN items_fts ON items_fts.formId = i.formId`
+			: `FROM ${TABLE_NAME_ITEMS} i`;
 
-			items = this.#db.query<Item, [string, string, number, number]>(
-				`SELECT i.formId, i.nameEn, i.nameRu, i.mainImage, i.categoryFormId, i.subcategoryFormId, i.slug
-				FROM ${TABLE_NAME_ITEMS} i
-				JOIN items_fts ON items_fts.formId = i.formId
-				WHERE items_fts MATCH ? AND i.categoryFormId = ?
-				${orderClause}
-				LIMIT ? OFFSET ?`
-			).all(escapedFilter, categoryFormId, pageSize, offset);
+		const items = this.#db.query<Item, any[]>(
+			`SELECT i.formId, i.nameEn, i.nameRu, i.mainImage, i.categoryFormId, i.subcategoryFormId, i.slug, i.isPTS, i.supportItem, i.supportBundles
+			${fromClause}
+			${whereClause}
+			${orderClause}
+			LIMIT ? OFFSET ?`
+		).all(...params, pageSize, offset);
 
-			totalItems = (this.#db.query<{ count: number }, [string, string]>(
-				`SELECT COUNT(*) AS count
-				FROM items_fts
-				JOIN ${TABLE_NAME_ITEMS} i ON items_fts.formId = i.formId
-				WHERE items_fts MATCH ? AND i.categoryFormId = ?`
-			).get(escapedFilter, categoryFormId) as { count: number }).count;
-		} else {
-			items = this.#db.query<Item, [string, number, number]>(
-				`SELECT formId, nameEn, nameRu, mainImage, categoryFormId, subcategoryFormId, slug
-				FROM ${TABLE_NAME_ITEMS}
-				WHERE categoryFormId = ?
-				${orderClause}
-				LIMIT ? OFFSET ?`
-			).all(categoryFormId, pageSize, offset);
+		// Count total items
+		const countFromClause = useFilter
+			? `FROM items_fts JOIN ${TABLE_NAME_ITEMS} i ON items_fts.formId = i.formId`
+			: `FROM ${TABLE_NAME_ITEMS} i`;
 
-			totalItems = (this.#db.query<{ count: number }, [string]>(
-				`SELECT COUNT(*) AS count
-				FROM ${TABLE_NAME_ITEMS}
-				WHERE categoryFormId = ?`
-			).get(categoryFormId) as { count: number }).count;
-		}
+		const totalItems = (this.#db.query<{ count: number }, any[]>(
+			`SELECT COUNT(*) AS count
+			${countFromClause}
+			${whereClause}`
+		).get(...params) as { count: number }).count;
 
 		return {
 			category,
@@ -112,55 +125,68 @@ export class Categories {
 		page: number,
 		pageSize: number,
 		filter: string,
-		order: string
+		order: string,
+		isPTS?: boolean,
+		hasSupport?: boolean
 	): Promise<SubcategoryItemsResponse | null> {
 		const offset = (page - 1) * pageSize;
 
-		// Получаем подкатегорию
+		// Get subcategory
 		const subcategory = this.#db.query<Subcategory, [string]>(
 			`SELECT * FROM ${TABLE_NAME_SUBCATEGORIES} WHERE formId = ?`
 		).get(subcategoryFormId);
 
 		if (!subcategory) return null;
 
-		let items: Item[] = [];
-		let totalItems = 0;
+		const conditions: string[] = [];
+		const params: any[] = [];
 
+		const useFilter = filter && filter.length > 2;
+		const baseTable = useFilter ? 'items_fts' : TABLE_NAME_ITEMS;
+
+		if (useFilter) {
+			const escapedFilter = escapeQuery(filter);
+			conditions.push(`${baseTable} MATCH ?`);
+			params.push(escapedFilter);
+		}
+
+		conditions.push('i.subcategoryFormId = ?');
+		params.push(subcategoryFormId);
+
+		if (isPTS === true) {
+			conditions.push('i.isPTS = 1');
+		}
+
+		if (hasSupport === true) {
+			conditions.push('(i.supportItem IS NOT NULL OR i.supportBundles IS NOT NULL)');
+		}
+
+		const whereClause = `WHERE ${conditions.join(' AND ')}`;
 		const orderClause = getF76AtxOrderClause(order);
 
-		if (filter && filter.length > 2) {
-			const escapedFilter = escapeQuery(filter);
+		// Main query
+		const fromClause = useFilter
+			? `FROM ${TABLE_NAME_ITEMS} i JOIN items_fts ON items_fts.formId = i.formId`
+			: `FROM ${TABLE_NAME_ITEMS} i`;
 
-			items = this.#db.query<Item, [string, string, number, number]>(
-				`SELECT i.formId, i.nameEn, i.nameRu, i.mainImage, i.categoryFormId, i.subcategoryFormId, i.slug
-				FROM ${TABLE_NAME_ITEMS} i
-				JOIN items_fts ON items_fts.formId = i.formId
-				WHERE items_fts MATCH ? AND i.subcategoryFormId = ?
-				${orderClause}
-				LIMIT ? OFFSET ?`
-			).all(escapedFilter, subcategoryFormId, pageSize, offset);
+		const items = this.#db.query<Item, any[]>(
+			`SELECT i.formId, i.nameEn, i.nameRu, i.mainImage, i.categoryFormId, i.subcategoryFormId, i.slug, i.isPTS, i.supportItem, i.supportBundles
+			${fromClause}
+			${whereClause}
+			${orderClause}
+			LIMIT ? OFFSET ?`
+		).all(...params, pageSize, offset);
 
-			totalItems = (this.#db.query<{ count: number }, [string, string]>(
-				`SELECT COUNT(*) AS count
-				FROM items_fts
-				JOIN ${TABLE_NAME_ITEMS} i ON items_fts.formId = i.formId
-				WHERE items_fts MATCH ? AND i.subcategoryFormId = ?`
-			).get(escapedFilter, subcategoryFormId) as { count: number }).count;
-		} else {
-			items = this.#db.query<Item, [string, number, number]>(
-				`SELECT formId, nameEn, nameRu, mainImage, categoryFormId, subcategoryFormId, slug
-				FROM ${TABLE_NAME_ITEMS}
-				WHERE subcategoryFormId = ?
-				${orderClause}
-				LIMIT ? OFFSET ?`
-			).all(subcategoryFormId, pageSize, offset);
+		// Count total items
+		const countFromClause = useFilter
+			? `FROM items_fts JOIN ${TABLE_NAME_ITEMS} i ON items_fts.formId = i.formId`
+			: `FROM ${TABLE_NAME_ITEMS} i`;
 
-			totalItems = (this.#db.query<{ count: number }, [string]>(
-				`SELECT COUNT(*) AS count
-				FROM ${TABLE_NAME_ITEMS}
-				WHERE subcategoryFormId = ?`
-			).get(subcategoryFormId) as { count: number }).count;
-		}
+		const totalItems = (this.#db.query<{ count: number }, any[]>(
+			`SELECT COUNT(*) AS count
+			${countFromClause}
+			${whereClause}`
+		).get(...params) as { count: number }).count;
 
 		return {
 			subcategory,

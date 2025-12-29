@@ -33,6 +33,9 @@ export interface Item {
 	screenshots: string | string[] | null;
 	categoryFormId: string | null;
 	subcategoryFormId: string | null;
+	isPTS: boolean | null;
+	supportItem: string | null;
+	supportBundles: string | null;
 	rarity: number | null;
 	slug: string | null;
 	orderByName: number;

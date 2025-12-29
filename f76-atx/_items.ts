@@ -21,46 +21,58 @@ export class Items {
 		page: number,
 		pageSize: number,
 		filter: string,
-		order: string
+		order: string,
+		isPTS?: boolean,
+		hasSupport?: boolean
 	): Promise<ItemsResponse | null> {
 		const offset = (page - 1) * pageSize;
 
-		let items: Item[] = [];
-		let totalItems = 0;
+		const conditions: string[] = [];
+		const params: any[] = [];
 
-		let orderClause = getF76AtxOrderClause(order);
+		const useFilter = filter && filter.length > 2;
+		const baseTable = useFilter ? 'items_fts' : TABLE_NAME_ITEMS;
 
-		if (filter && filter.length > 2) {
+		if (useFilter) {
 			const escapedFilter = escapeQuery(filter);
-
-			items = this.#db.query<Item, [string, number, number]>(
-				`SELECT i.formId, i.nameEn, i.nameRu, i.mainImage, i.categoryFormId, i.subcategoryFormId, i.slug
-				FROM ${TABLE_NAME_ITEMS} i
-				JOIN items_fts ON items_fts.formId = i.formId
-				WHERE items_fts MATCH ?
-				${orderClause}
-				LIMIT ? OFFSET ?`
-			).all(escapedFilter, pageSize, offset);
-
-			totalItems = (this.#db.query<{ count: number }, [string]>(
-				`SELECT COUNT(*) AS count
-				FROM items_fts
-				JOIN ${TABLE_NAME_ITEMS} i ON items_fts.formId = i.formId
-				WHERE items_fts MATCH ?`
-			).get(escapedFilter) as { count: number }).count;
-		} else {
-			items = this.#db.query<Item, [number, number]>(
-				`SELECT formId, nameEn, nameRu, mainImage, categoryFormId, subcategoryFormId, slug
-				FROM ${TABLE_NAME_ITEMS}
-				${orderClause}
-				LIMIT ? OFFSET ?`
-			).all(pageSize, offset);
-
-			totalItems = (this.#db.query<{ count: number }, []>(
-				`SELECT COUNT(*) AS count
-				FROM ${TABLE_NAME_ITEMS}`
-			).get() as { count: number }).count;
+			conditions.push(`${baseTable} MATCH ?`);
+			params.push(escapedFilter);
 		}
+
+		if (isPTS === true) {
+			conditions.push('i.isPTS = 1');
+		}
+
+		if (hasSupport === true) {
+			conditions.push('(i.supportItem IS NOT NULL OR i.supportBundles IS NOT NULL)');
+		}
+
+		const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+		const orderClause = getF76AtxOrderClause(order);
+
+		// Main query
+		const fromClause = useFilter
+			? `FROM ${TABLE_NAME_ITEMS} i JOIN items_fts ON items_fts.formId = i.formId`
+			: `FROM ${TABLE_NAME_ITEMS} i`;
+
+		const items = this.#db.query<Item, any[]>(
+			`SELECT i.formId, i.nameEn, i.nameRu, i.mainImage, i.categoryFormId, i.subcategoryFormId, i.slug, i.isPTS, i.supportItem, i.supportBundles
+			${fromClause}
+			${whereClause}
+			${orderClause}
+			LIMIT ? OFFSET ?`
+		).all(...params, pageSize, offset);
+
+		// Count total items
+		const countFromClause = useFilter
+			? `FROM items_fts JOIN ${TABLE_NAME_ITEMS} i ON items_fts.formId = i.formId`
+			: `FROM ${TABLE_NAME_ITEMS} i`;
+
+		const totalItems = (this.#db.query<{ count: number }, any[]>(
+			`SELECT COUNT(*) AS count
+			${countFromClause}
+			${whereClause}`
+		).get(...params) as { count: number }).count;
 
 		return {
 			items,

@@ -131,6 +131,8 @@ const app = new Elysia()
 		const categories = new F76AtxCategories();
 
 		const categoryFormId = params.category_form_id;
+		const isPTS = query.is_pts === '1' || query.is_pts === 'true';
+		const hasSupport = query.has_support === '1' || query.has_support === 'true';
 		let page: any = query.page;
 		let pageSize: any = query.page_size;
 		let filter: any = query.filter;
@@ -149,7 +151,9 @@ const app = new Elysia()
 			parseInt(page),
 			parseInt(pageSize),
 			filter,
-			order
+			order,
+			isPTS,
+			hasSupport
 		);
 
 		if (!result) {
@@ -163,6 +167,8 @@ const app = new Elysia()
 		const categories = new F76AtxCategories();
 
 		const subcategoryFormId = params.subcategory_form_id;
+		const isPTS = query.is_pts === '1' || query.is_pts === 'true';
+		const hasSupport = query.has_support === '1' || query.has_support === 'true';
 		let page: any = query.page;
 		let pageSize: any = query.page_size;
 		let filter: any = query.filter;
@@ -181,7 +187,9 @@ const app = new Elysia()
 			parseInt(page),
 			parseInt(pageSize),
 			filter,
-			order
+			order,
+			isPTS,
+			hasSupport
 		);
 
 		if (!result) {
@@ -194,6 +202,8 @@ const app = new Elysia()
 	.get('/f76/atomicshop/items', async ({ query }) => {
 		const items = new F76AtxItems();
 
+		const isPTS = query.is_pts === '1' || query.is_pts === 'true';
+		const hasSupport = query.has_support === '1' || query.has_support === 'true';
 		let page: any = query.page;
 		let pageSize: any = query.page_size;
 		let filter: any = query.filter;
@@ -203,7 +213,14 @@ const app = new Elysia()
 		if (!isInteger(pageSize)) pageSize = ATX_PAGE_SIZE;
 		if (!F76ATX_VALID_SORT_ORDERS.includes(order) && order) order = F76ATX_VALID_SORT_ORDERS[0];
 
-		const result = await items.getItems(parseInt(page), parseInt(pageSize), filter, order);
+		const result = await items.getItems(
+			parseInt(page),
+			parseInt(pageSize),
+			filter,
+			order,
+			isPTS,
+			hasSupport
+		);
 
 		if (!result) {
 			return {};
