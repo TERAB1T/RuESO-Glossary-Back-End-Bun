@@ -10,10 +10,14 @@ import { Books } from "./library/_books";
 import { Categories as F76AtxCategories } from "./f76-atx/_categories";
 import { Items as F76AtxItems } from "./f76-atx/_items";
 
+import { Categories as F76CampCategories } from "./f76-camp/_categories";
+import { Items as F76CampItems } from "./f76-camp/_items";
+
 import { DB_PATH as LIBRARY_DB_PATH } from "./library/constants";
 import { TES_DB_PATH as GLOSSARY_TES_DB_PATH } from "./glossary/constants";
 import { FALLOUT_DB_PATH as GLOSSARY_FALLOUT_DB_PATH } from "./glossary/constants";
 import { DB_PATH as F76ATX_DB_PATH, VALID_SORT_ORDERS as F76ATX_VALID_SORT_ORDERS } from "./f76-atx/constants";
+import { DB_PATH as F76CAMP_DB_PATH, VALID_SORT_ORDERS as F76CAMP_VALID_SORT_ORDERS } from "./f76-camp/constants";
 
 const isWindows = process.platform === 'win32';
 const SOCKET_PATH = '/tmp/apiRueso.sock';
@@ -121,6 +125,8 @@ const app = new Elysia()
 		const lastModified = await getFileLastModifiedDate(GLOSSARY_FALLOUT_DB_PATH);
 		return { lastModified };
 	})
+
+	// F76 Atomic Shop
 
 	.get("/f76/atomicshop/categories", async () => {
 		const categories = new F76AtxCategories();
@@ -240,6 +246,124 @@ const app = new Elysia()
 
 	.get("/f76/atomicshop/updated", async () => {
 		const lastModified = await getFileLastModifiedDate(F76ATX_DB_PATH);
+		return { lastModified };
+	})
+	
+
+	// F76 C.A.M.P.
+
+	.get("/f76/camp/categories", async () => {
+		const categories = new F76CampCategories();
+		return await categories.getCategories();
+	})
+
+	.get("/f76/camp/categories/:category_form_id", async ({ params, query }) => {
+		const categories = new F76CampCategories();
+
+		const categoryFormId = params.category_form_id;
+		const isPTS = query.is_pts === '1' || query.is_pts === 'true';
+		let page: any = query.page;
+		let pageSize: any = query.page_size;
+		let filter: any = query.filter;
+		let order: any = query.sort_order;
+
+		if (!isInteger(page)) page = 1;
+		if (!isInteger(pageSize)) pageSize = ATX_PAGE_SIZE;
+		if (!F76CAMP_VALID_SORT_ORDERS.includes(order) && order) order = F76CAMP_VALID_SORT_ORDERS[0];
+
+		if (!isHex(categoryFormId)) {
+			return {};
+		}
+
+		const result = await categories.getCategoryItems(
+			categoryFormId,
+			parseInt(page),
+			parseInt(pageSize),
+			filter,
+			order,
+			isPTS
+		);
+
+		if (!result) {
+			return {};
+		}
+
+		return result;
+	})
+
+	.get("/f76/camp/subcategories/:subcategory_form_id", async ({ params, query }) => {
+		const categories = new F76CampCategories();
+
+		const subcategoryFormId = params.subcategory_form_id;
+		const isPTS = query.is_pts === '1' || query.is_pts === 'true';
+		let page: any = query.page;
+		let pageSize: any = query.page_size;
+		let filter: any = query.filter;
+		let order: any = query.sort_order;
+
+		if (!isInteger(page)) page = 1;
+		if (!isInteger(pageSize)) pageSize = ATX_PAGE_SIZE;
+		if (!F76CAMP_VALID_SORT_ORDERS.includes(order) && order) order = F76CAMP_VALID_SORT_ORDERS[0];
+
+		if (!isHex(subcategoryFormId)) {
+			return {};
+		}
+
+		const result = await categories.getSubcategoryItems(
+			subcategoryFormId,
+			parseInt(page),
+			parseInt(pageSize),
+			filter,
+			order,
+			isPTS
+		);
+
+		if (!result) {
+			return {};
+		}
+
+		return result;
+	})
+
+	.get('/f76/camp/items', async ({ query }) => {
+		const items = new F76CampItems();
+
+		const isPTS = query.is_pts === '1' || query.is_pts === 'true';
+		let page: any = query.page;
+		let pageSize: any = query.page_size;
+		let filter: any = query.filter;
+		let order: any = query.sort_order;
+
+		if (!isInteger(page)) page = 1;
+		if (!isInteger(pageSize)) pageSize = ATX_PAGE_SIZE;
+		if (!F76CAMP_VALID_SORT_ORDERS.includes(order) && order) order = F76CAMP_VALID_SORT_ORDERS[0];
+
+		const result = await items.getItems(
+			parseInt(page),
+			parseInt(pageSize),
+			filter,
+			order,
+			isPTS
+		);
+
+		if (!result) {
+			return {};
+		}
+
+		return result;
+	})
+
+	.get('/f76/camp/items/:item_form_id', async ({ params }) => {
+		const items = new F76CampItems();
+
+		const itemId = params.item_form_id;
+		if (!isHex(itemId)) return {};
+
+		return await items.getItem(itemId);
+	})
+
+	.get("/f76/camp/updated", async () => {
+		const lastModified = await getFileLastModifiedDate(F76CAMP_DB_PATH);
 		return { lastModified };
 	})
 

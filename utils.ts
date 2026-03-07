@@ -61,3 +61,18 @@ export function getF76AtxOrderClause(order: string): string {
 			return "ORDER BY orderByFormId DESC";
 	}
 }
+
+export function getF76CampOrderClause(order: string): string {
+	switch (order) {
+		case "date_desc":
+			return "ORDER BY orderByFormId DESC";
+		case "date_asc":
+			return "ORDER BY orderByFormId ASC";
+		case "name_desc":
+			return "ORDER BY orderByName DESC";
+		case "name_asc":
+			return "ORDER BY orderByName ASC";
+		default:
+			return "ORDER BY orderByFormId DESC";
+	}
+}
