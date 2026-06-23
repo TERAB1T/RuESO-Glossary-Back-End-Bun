@@ -6,7 +6,7 @@
       "name": "rueso-glossary-back-end-bun",
       "dependencies": {
         "@elysiajs/cors": "^1.4.2",
-        "elysia": "^1.4.28",
+        "elysia": "^1.4.29",
         "html-escaper": "^3.0.3",
       },
       "devDependencies": {

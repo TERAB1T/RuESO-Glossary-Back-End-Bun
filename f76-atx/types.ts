@@ -22,6 +22,16 @@ export interface CategoryWithSubcategories extends Category {
 	subcategories: Subcategory[];
 }
 
+export interface CampUnlockedItem {
+	formId: string;
+	nameEn: string | null;
+	nameRu: string | null;
+	mainImage: string | null;
+	slug: string | null;
+	category: Pick<Category, 'formId' | 'nameEn' | 'nameRu' | 'slug'> | null;
+	subcategory: Pick<Subcategory, 'formId' | 'nameEn' | 'nameRu' | 'slug'> | null;
+}
+
 export interface Item {
 	formId: string;
 	editorId: string;
@@ -36,6 +46,7 @@ export interface Item {
 	isPTS: boolean | null;
 	supportItem: string | null;
 	supportBundles: string | null;
+	campUnlockedItems: string | null;
 	rarity: number | null;
 	slug: string | null;
 	orderByName: number;
@@ -66,7 +77,8 @@ export interface ItemsResponse {
 	pagination: PaginationInfo;
 }
 
-export interface ItemWithRelations extends Item {
+export interface ItemWithRelations extends Omit<Item, 'campUnlockedItems'> {
 	category: Pick<Category, 'formId' | 'nameEn' | 'nameRu' | 'slug'> | null;
 	subcategory: Pick<Subcategory, 'formId' | 'nameEn' | 'nameRu' | 'slug'> | null;
+	campUnlockedItems: CampUnlockedItem[] | null;
 }

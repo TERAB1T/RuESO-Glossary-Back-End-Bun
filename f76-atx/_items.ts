@@ -1,5 +1,11 @@
 import { Database } from "bun:sqlite";
 import { DB_PATH, TABLE_NAME_ITEMS, TABLE_NAME_CATEGORIES, TABLE_NAME_SUBCATEGORIES } from "./constants";
+import {
+	DB_PATH as CAMP_DB_PATH,
+	TABLE_NAME_ITEMS as CAMP_TABLE_NAME_ITEMS,
+	TABLE_NAME_CATEGORIES as CAMP_TABLE_NAME_CATEGORIES,
+	TABLE_NAME_SUBCATEGORIES as CAMP_TABLE_NAME_SUBCATEGORIES
+} from "../f76-camp/constants";
 import { escapeQuery, getF76AtxOrderClause } from "../utils";
 
 import type {
@@ -7,11 +13,29 @@ import type {
 	Subcategory,
 	Item,
 	ItemsResponse,
-	ItemWithRelations
+	ItemWithRelations,
+	CampUnlockedItem
 } from "./types";
+
+interface CampUnlockedItemRow {
+	formId: string;
+	nameEn: string | null;
+	nameRu: string | null;
+	mainImage: string | null;
+	slug: string | null;
+	categoryFormId: string | null;
+	categoryNameEn: string | null;
+	categoryNameRu: string | null;
+	categorySlug: string | null;
+	subcategoryFormId: string | null;
+	subcategoryNameEn: string | null;
+	subcategoryNameRu: string | null;
+	subcategorySlug: string | null;
+}
 
 export class Items {
 	#db: Database;
+	#campAttached = false;
 
 	constructor() {
 		this.#db = new Database(DB_PATH);
@@ -110,7 +134,60 @@ export class Items {
 		return {
 			...item,
 			category: category || null,
-			subcategory: subcategory || null
+			subcategory: subcategory || null,
+			campUnlockedItems: this.#resolveCampUnlockedItems(item.campUnlockedItems)
 		};
+	}
+
+	#ensureCampAttached() {
+		if (this.#campAttached) return;
+		this.#db.query(`ATTACH DATABASE ? AS campdb`).run(CAMP_DB_PATH);
+		this.#campAttached = true;
+	}
+
+	#resolveCampUnlockedItems(raw: string | null): CampUnlockedItem[] | null {
+		if (!raw) return null;
+
+		const formIds = raw.split('|').filter(Boolean);
+		if (formIds.length === 0) return null;
+
+		this.#ensureCampAttached();
+
+		const placeholders = formIds.map(() => '?').join(',');
+
+		const rows = this.#db.query<CampUnlockedItemRow, string[]>(
+			`SELECT
+				ci.formId AS formId,
+				ci.nameEn AS nameEn,
+				ci.nameRu AS nameRu,
+				ci.mainImage AS mainImage,
+				ci.slug AS slug,
+				cc.formId AS categoryFormId,
+				cc.nameEn AS categoryNameEn,
+				cc.nameRu AS categoryNameRu,
+				cc.slug AS categorySlug,
+				cs.formId AS subcategoryFormId,
+				cs.nameEn AS subcategoryNameEn,
+				cs.nameRu AS subcategoryNameRu,
+				cs.slug AS subcategorySlug
+			FROM campdb.${CAMP_TABLE_NAME_ITEMS} ci
+			LEFT JOIN campdb.${CAMP_TABLE_NAME_CATEGORIES} cc ON cc.formId = ci.categoryFormId
+			LEFT JOIN campdb.${CAMP_TABLE_NAME_SUBCATEGORIES} cs ON cs.formId = ci.subcategoryFormId
+			WHERE ci.formId IN (${placeholders})`
+		).all(...formIds);
+
+		return rows.map(row => ({
+			formId: row.formId,
+			nameEn: row.nameEn,
+			nameRu: row.nameRu,
+			mainImage: row.mainImage,
+			slug: row.slug,
+			category: row.categoryFormId
+				? { formId: row.categoryFormId, nameEn: row.categoryNameEn, nameRu: row.categoryNameRu, slug: row.categorySlug }
+				: null,
+			subcategory: row.subcategoryFormId
+				? { formId: row.subcategoryFormId, nameEn: row.subcategoryNameEn, nameRu: row.subcategoryNameRu, slug: row.subcategorySlug }
+				: null
+		}));
 	}
 }
