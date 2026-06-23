@@ -35,6 +35,7 @@ export interface Item {
 	subcategoryFormId: string | null;
 	isPTS: boolean | null;
 	slug: string | null;
+	orderInGame: number;
 	orderByName: number;
 	orderByFormId: number;
 }

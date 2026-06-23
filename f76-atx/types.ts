@@ -1,3 +1,5 @@
+import type { Category as CampCategory, Subcategory as CampSubcategory } from "../f76-camp/types";
+
 export interface Category {
 	formId: string;
 	editorId: string;
@@ -28,8 +30,8 @@ export interface CampUnlockedItem {
 	nameRu: string | null;
 	mainImage: string | null;
 	slug: string | null;
-	category: Pick<Category, 'formId' | 'nameEn' | 'nameRu' | 'slug'> | null;
-	subcategory: Pick<Subcategory, 'formId' | 'nameEn' | 'nameRu' | 'slug'> | null;
+	category: Pick<CampCategory, 'formId' | 'nameEn' | 'nameRu' | 'slug'> | null;
+	subcategory: Pick<CampSubcategory, 'formId' | 'nameEn' | 'nameRu' | 'slug'> | null;
 }
 
 export interface Item {

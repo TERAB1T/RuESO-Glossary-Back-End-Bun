@@ -173,7 +173,8 @@ export class Items {
 			FROM campdb.${CAMP_TABLE_NAME_ITEMS} ci
 			LEFT JOIN campdb.${CAMP_TABLE_NAME_CATEGORIES} cc ON cc.formId = ci.categoryFormId
 			LEFT JOIN campdb.${CAMP_TABLE_NAME_SUBCATEGORIES} cs ON cs.formId = ci.subcategoryFormId
-			WHERE ci.formId IN (${placeholders})`
+			WHERE ci.formId IN (${placeholders})
+			ORDER BY ci.orderInGame`
 		).all(...formIds);
 
 		return rows.map(row => ({
