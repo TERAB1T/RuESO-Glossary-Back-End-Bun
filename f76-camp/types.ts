@@ -64,7 +64,22 @@ export interface ItemsResponse {
 	pagination: PaginationInfo;
 }
 
+export interface UnlockedByEntitlement {
+	formId: string;
+	nameEn: string | null;
+	nameRu: string | null;
+	mainImage: string | null;
+	screenshots: string[] | null;
+	slug: string | null;
+}
+
 export interface ItemWithRelations extends Item {
 	category: Pick<Category, 'formId' | 'nameEn' | 'nameRu' | 'slug'> | null;
 	subcategory: Pick<Subcategory, 'formId' | 'nameEn' | 'nameRu' | 'slug'> | null;
+	camp: boolean;
+	shelter: boolean;
+	workshop: boolean;
+	campOwned: boolean;
+	learnConditions: string | null;
+	unlockedByEntitlements: UnlockedByEntitlement[] | null;
 }

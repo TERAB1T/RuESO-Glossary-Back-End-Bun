@@ -1,5 +1,9 @@
 import { Database } from "bun:sqlite";
 import { DB_PATH, TABLE_NAME_ITEMS, TABLE_NAME_CATEGORIES, TABLE_NAME_SUBCATEGORIES } from "./constants";
+import {
+	DB_PATH as ATX_DB_PATH,
+	TABLE_NAME_ITEMS as ATX_TABLE_NAME_ITEMS
+} from "../f76-atx/constants";
 import { escapeQuery, getF76CampOrderClause } from "../utils";
 
 import type {
@@ -7,11 +11,22 @@ import type {
 	Subcategory,
 	Item,
 	ItemsResponse,
-	ItemWithRelations
+	ItemWithRelations,
+	UnlockedByEntitlement
 } from "./types";
+
+interface UnlockedByEntitlementRow {
+	formId: string;
+	nameEn: string | null;
+	nameRu: string | null;
+	mainImage: string | null;
+	screenshots: string | null;
+	slug: string | null;
+}
 
 export class Items {
 	#db: Database;
+	#atxAttached = false;
 
 	constructor() {
 		this.#db = new Database(DB_PATH);
@@ -81,7 +96,7 @@ export class Items {
 	}
 
 	async getItem(itemFormId: string): Promise<ItemWithRelations | null> {
-		const item = this.#db.query<Item, [string]>(
+		const item = this.#db.query<Item & { camp: boolean; shelter: boolean; workshop: boolean; campOwned: boolean; learnConditions: string | null; unlockEntitlements: string | null }, [string]>(
 			`SELECT * FROM ${TABLE_NAME_ITEMS} WHERE formId = ?`
 		).get(itemFormId);
 
@@ -102,10 +117,46 @@ export class Items {
 			).get(item.subcategoryFormId)
 			: null;
 
+		const { unlockEntitlements, ...itemWithoutRawEntitlements } = item;
+
 		return {
-			...item,
+			...itemWithoutRawEntitlements,
 			category: category || null,
-			subcategory: subcategory || null
+			subcategory: subcategory || null,
+			unlockedByEntitlements: this.#resolveUnlockedByEntitlements(unlockEntitlements)
 		};
+	}
+
+	#ensureAtxAttached() {
+		if (this.#atxAttached) return;
+		this.#db.query(`ATTACH DATABASE ? AS atxdb`).run(ATX_DB_PATH);
+		this.#atxAttached = true;
+	}
+
+	#resolveUnlockedByEntitlements(raw: string | null): UnlockedByEntitlement[] | null {
+		if (!raw) return null;
+
+		const formIds = raw.split('|').filter(Boolean);
+		if (formIds.length === 0) return null;
+
+		this.#ensureAtxAttached();
+
+		const placeholders = formIds.map(() => '?').join(',');
+
+		const rows = this.#db.query<UnlockedByEntitlementRow, string[]>(
+			`SELECT formId, nameEn, nameRu, mainImage, screenshots, slug
+			FROM atxdb.${ATX_TABLE_NAME_ITEMS}
+			WHERE formId IN (${placeholders})
+			ORDER BY orderByFormId`
+		).all(...formIds);
+
+		return rows.map(row => ({
+			formId: row.formId,
+			nameEn: row.nameEn,
+			nameRu: row.nameRu,
+			mainImage: row.mainImage,
+			screenshots: row.screenshots ? row.screenshots.split(';') : null,
+			slug: row.slug
+		}));
 	}
 }
