@@ -96,7 +96,7 @@ export class Items {
 	}
 
 	async getItem(itemFormId: string): Promise<ItemWithRelations | null> {
-		const item = this.#db.query<Item & { camp: boolean; shelter: boolean; workshop: boolean; campOwned: boolean; learnConditions: string | null; unlockEntitlements: string | null }, [string]>(
+		const item = this.#db.query<Item & { camp: boolean; shelter: boolean; workshop: boolean; campOwned: boolean; campMaxFormId: string | null; campMaxValue: number | null; workshopMaxFormId: string | null; workshopMaxValue: number | null; learnConditions: string | null; unlockEntitlements: string | null }, [string]>(
 			`SELECT * FROM ${TABLE_NAME_ITEMS} WHERE formId = ?`
 		).get(itemFormId);
 

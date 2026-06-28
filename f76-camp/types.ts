@@ -80,6 +80,10 @@ export interface ItemWithRelations extends Item {
 	shelter: boolean;
 	workshop: boolean;
 	campOwned: boolean;
+	campMaxFormId: string | null;
+	campMaxValue: number | null;
+	workshopMaxFormId: string | null;
+	workshopMaxValue: number | null;
 	learnConditions: string | null;
 	unlockedByEntitlements: UnlockedByEntitlement[] | null;
 }
