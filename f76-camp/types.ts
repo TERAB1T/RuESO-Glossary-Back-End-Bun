@@ -73,6 +73,39 @@ export interface UnlockedByEntitlement {
 	slug: string | null;
 }
 
+export interface ProducesItemNode {
+	kind: 'item';
+	formId: string;
+	editorId: string | null;
+	en: string | null;
+	ru: string | null;
+	type: string | null;
+	count: number;
+	probability: number;
+	availabilityNote: string | null;
+}
+
+export interface ProducesListNode {
+	kind: 'list';
+	formId: string;
+	editorId: string | null;
+	en: string | null;
+	ru: string | null;
+	probability: number;
+	entries: ProducesNode[];
+}
+
+export type ProducesNode = ProducesItemNode | ProducesListNode;
+
+export interface ProducesMode {
+	en: string | null;
+	ru: string | null;
+	intervalHours: number | null;
+	outcomes: ProducesNode[];
+	modeEn?: string;
+	modeRu?: string;
+}
+
 export interface ItemWithRelations extends Item {
 	category: Pick<Category, 'formId' | 'nameEn' | 'nameRu' | 'slug'> | null;
 	subcategory: Pick<Subcategory, 'formId' | 'nameEn' | 'nameRu' | 'slug'> | null;
@@ -84,6 +117,7 @@ export interface ItemWithRelations extends Item {
 	campMaxValue: number | null;
 	workshopMaxFormId: string | null;
 	workshopMaxValue: number | null;
-	learnConditions: string | null;
+	learnConditions: unknown[] | null;
+	produces: ProducesMode[] | null;
 	unlockedByEntitlements: UnlockedByEntitlement[] | null;
 }
