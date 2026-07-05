@@ -1,5 +1,5 @@
 import { Database } from "bun:sqlite";
-import { DB_PATH, TABLE_NAME_ITEMS, TABLE_NAME_CATEGORIES, TABLE_NAME_SUBCATEGORIES } from "./constants";
+import { DB_PATH, TABLE_NAME_ITEMS, TABLE_NAME_CATEGORIES, TABLE_NAME_SUBCATEGORIES, TABLE_NAME_RECIPES } from "./constants";
 import {
 	DB_PATH as ATX_DB_PATH,
 	TABLE_NAME_ITEMS as ATX_TABLE_NAME_ITEMS
@@ -12,16 +12,30 @@ import type {
 	Item,
 	ItemsResponse,
 	ItemWithRelations,
-	UnlockedByEntitlement
+	UnlockedByEntitlement,
+	RecipeInfo,
+	RecipeComponent,
+	RecipeSiblingItem
 } from "./types";
 
 interface UnlockedByEntitlementRow {
 	formId: string;
+	editorId: string;
 	nameEn: string | null;
 	nameRu: string | null;
 	mainImage: string | null;
 	screenshots: string | null;
 	slug: string | null;
+}
+
+interface RecipeRow {
+	formId: string;
+	editorId: string;
+	nameEn: string | null;
+	nameRu: string | null;
+	descriptionEn: string | null;
+	descriptionRu: string | null;
+	components: string | null;
 }
 
 export class Items {
@@ -96,7 +110,7 @@ export class Items {
 	}
 
 	async getItem(itemFormId: string): Promise<ItemWithRelations | null> {
-		const item = this.#db.query<Item & { camp: boolean; shelter: boolean; workshop: boolean; campOwned: boolean; campMaxFormId: string | null; campMaxValue: number | null; workshopMaxFormId: string | null; workshopMaxValue: number | null; learnConditions: string | null; produces: string | null; unlockEntitlements: string | null }, [string]>(
+		const item = this.#db.query<Item & { camp: boolean; shelter: boolean; workshop: boolean; campOwned: boolean; campMaxFormId: string | null; campMaxValue: number | null; workshopMaxFormId: string | null; workshopMaxValue: number | null; learnConditions: string | null; produces: string | null; unlockEntitlements: string | null; recipeFormId: string }, [string]>(
 			`SELECT * FROM ${TABLE_NAME_ITEMS} WHERE formId = ?`
 		).get(itemFormId);
 
@@ -125,7 +139,9 @@ export class Items {
 			produces: item.produces ? JSON.parse(item.produces) : null,
 			category: category || null,
 			subcategory: subcategory || null,
-			unlockedByEntitlements: this.#resolveUnlockedByEntitlements(unlockEntitlements)
+			unlockedByEntitlements: this.#resolveUnlockedByEntitlements(unlockEntitlements),
+			recipe: item.recipeFormId ? this.#resolveRecipe(item.recipeFormId) : null,
+			recipeItems: item.recipeFormId ? this.#resolveRecipeItems(item.recipeFormId, item.formId) : []
 		};
 	}
 
@@ -146,7 +162,7 @@ export class Items {
 		const placeholders = formIds.map(() => '?').join(',');
 
 		const rows = this.#db.query<UnlockedByEntitlementRow, string[]>(
-			`SELECT formId, nameEn, nameRu, mainImage, screenshots, slug
+			`SELECT formId, editorId, nameEn, nameRu, mainImage, screenshots, slug
 			FROM atxdb.${ATX_TABLE_NAME_ITEMS}
 			WHERE formId IN (${placeholders})
 			ORDER BY orderByFormId`
@@ -154,11 +170,41 @@ export class Items {
 
 		return rows.map(row => ({
 			formId: row.formId,
+			editorId: row.editorId,
 			nameEn: row.nameEn,
 			nameRu: row.nameRu,
 			mainImage: row.mainImage,
 			screenshots: row.screenshots ? row.screenshots.split(';') : null,
 			slug: row.slug
 		}));
+	}
+
+	#resolveRecipe(recipeFormId: string): RecipeInfo | null {
+		const row = this.#db.query<RecipeRow, [string]>(
+			`SELECT formId, editorId, nameEn, nameRu, descriptionEn, descriptionRu, components
+		FROM ${TABLE_NAME_RECIPES}
+		WHERE formId = ?`
+		).get(recipeFormId);
+
+		if (!row) return null;
+
+		return {
+			formId: row.formId,
+			editorId: row.editorId,
+			nameEn: row.nameEn,
+			nameRu: row.nameRu,
+			descriptionEn: row.descriptionEn,
+			descriptionRu: row.descriptionRu,
+			components: row.components ? (JSON.parse(row.components) as RecipeComponent[]) : []
+		};
+	}
+
+	#resolveRecipeItems(recipeFormId: string, excludeFormId: string): RecipeSiblingItem[] {
+		return this.#db.query<RecipeSiblingItem, [string, string]>(
+			`SELECT formId, nameEn, nameRu, slug
+		FROM ${TABLE_NAME_ITEMS}
+		WHERE recipeFormId = ? AND formId != ?
+		ORDER BY orderInGame`
+		).all(recipeFormId, excludeFormId);
 	}
 }

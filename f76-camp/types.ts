@@ -66,6 +66,7 @@ export interface ItemsResponse {
 
 export interface UnlockedByEntitlement {
 	formId: string;
+	editorId: string;
 	nameEn: string | null;
 	nameRu: string | null;
 	mainImage: string | null;
@@ -107,6 +108,31 @@ export interface ProducesMode {
 	cost?: number;
 }
 
+export interface RecipeComponent {
+	formId: string;
+	editorId: string | null;
+	nameEn: string | null;
+	nameRu: string | null;
+	count: number;
+}
+
+export interface RecipeInfo {
+	formId: string;
+	editorId: string;
+	nameEn: string | null;
+	nameRu: string | null;
+	descriptionEn: string | null;
+	descriptionRu: string | null;
+	components: RecipeComponent[];
+}
+
+export interface RecipeSiblingItem {
+	formId: string;
+	nameEn: string | null;
+	nameRu: string | null;
+	slug: string | null;
+}
+
 export interface ItemWithRelations extends Item {
 	category: Pick<Category, 'formId' | 'nameEn' | 'nameRu' | 'slug'> | null;
 	subcategory: Pick<Subcategory, 'formId' | 'nameEn' | 'nameRu' | 'slug'> | null;
@@ -121,4 +147,6 @@ export interface ItemWithRelations extends Item {
 	learnConditions: unknown[] | null;
 	produces: ProducesMode[] | null;
 	unlockedByEntitlements: UnlockedByEntitlement[] | null;
+	recipe: RecipeInfo | null;
+	recipeItems: RecipeSiblingItem[];
 }
