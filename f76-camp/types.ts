@@ -108,6 +108,24 @@ export interface ProducesMode {
 	cost?: number;
 }
 
+export interface DisplayAllowedEntry {
+	formId: string;
+	en: string | null;
+	ru: string | null;
+	maxAmount: number;
+}
+
+export interface DisplayExcludedEntry {
+	formId: string;
+	en: string | null;
+	ru: string | null;
+}
+
+export interface DisplayInfo {
+	allowed: DisplayAllowedEntry[];
+	excluded: DisplayExcludedEntry[];
+}
+
 export interface RecipeComponent {
 	formId: string;
 	editorId: string | null;
@@ -146,6 +164,7 @@ export interface ItemWithRelations extends Item {
 	workshopMaxValue: number | null;
 	learnConditions: unknown[] | null;
 	produces: ProducesMode[] | null;
+	display: DisplayInfo | null;
 	unlockedByEntitlements: UnlockedByEntitlement[] | null;
 	recipe: RecipeInfo | null;
 	recipeItems: RecipeSiblingItem[];

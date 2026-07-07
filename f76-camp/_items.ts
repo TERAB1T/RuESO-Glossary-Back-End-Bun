@@ -110,7 +110,7 @@ export class Items {
 	}
 
 	async getItem(itemFormId: string): Promise<ItemWithRelations | null> {
-		const item = this.#db.query<Item & { camp: boolean; shelter: boolean; workshop: boolean; campOwned: boolean; campMaxFormId: string | null; campMaxValue: number | null; workshopMaxFormId: string | null; workshopMaxValue: number | null; learnConditions: string | null; produces: string | null; unlockEntitlements: string | null; recipeFormId: string }, [string]>(
+		const item = this.#db.query<Item & { camp: boolean; shelter: boolean; workshop: boolean; campOwned: boolean; campMaxFormId: string | null; campMaxValue: number | null; workshopMaxFormId: string | null; workshopMaxValue: number | null; learnConditions: string | null; produces: string | null; display: string | null; unlockEntitlements: string | null; recipeFormId: string }, [string]>(
 			`SELECT * FROM ${TABLE_NAME_ITEMS} WHERE formId = ?`
 		).get(itemFormId);
 
@@ -137,6 +137,7 @@ export class Items {
 			...itemWithoutRawEntitlements,
 			learnConditions: item.learnConditions ? JSON.parse(item.learnConditions) : null,
 			produces: item.produces ? JSON.parse(item.produces) : null,
+			display: item.display ? JSON.parse(item.display) : null,
 			category: category || null,
 			subcategory: subcategory || null,
 			unlockedByEntitlements: this.#resolveUnlockedByEntitlements(unlockEntitlements),
