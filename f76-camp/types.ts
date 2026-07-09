@@ -162,6 +162,7 @@ export interface ItemWithRelations extends Item {
 	campMaxValue: number | null;
 	workshopMaxFormId: string | null;
 	workshopMaxValue: number | null;
+	carryWeight: number | null;
 	learnConditions: unknown[] | null;
 	produces: ProducesMode[] | null;
 	display: DisplayInfo | null;
