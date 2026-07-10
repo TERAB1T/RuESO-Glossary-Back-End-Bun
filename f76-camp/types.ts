@@ -163,6 +163,11 @@ export interface ItemWithRelations extends Item {
 	workshopMaxFormId: string | null;
 	workshopMaxValue: number | null;
 	carryWeight: number | null;
+	requiresPower: boolean;
+	powerRequired: number;
+	powerConnectable: boolean;
+	powerGenerated: number;
+	powerRadiated: number;
 	learnConditions: unknown[] | null;
 	produces: ProducesMode[] | null;
 	display: DisplayInfo | null;
