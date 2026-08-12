@@ -91,4 +91,40 @@ export class Patches {
 			this.#db.close();
 		}
 	}
+
+	async getPatchBooksExport(patchVersion: string) {
+		try {
+			const patch = this.#db.query(`SELECT * FROM ${TABLE_NAME_PATCHES} WHERE version = ?`).get(patchVersion);
+
+			if (!patch) return {};
+
+			const books = this.#db.query(
+				`SELECT id, titleEn, titleRu, icon, slug, catId
+				FROM ${TABLE_NAME_BOOKS}
+				WHERE created = ?
+				ORDER BY orderCatId ASC`
+			).all(patchVersion);
+
+			const catIds = [...new Set(books.map(book => book.catId))];
+			let categories: any[] = [];
+
+			if (catIds.length !== 0) {
+				const catPlaceholders = catIds.map(() => "?").join(",");
+				categories = this.#db.query(
+					`SELECT id, titleRu
+					FROM ${TABLE_NAME_CATEGORIES}
+					WHERE id IN (${catPlaceholders})
+					ORDER BY orderId ASC`
+				).all(...catIds);
+			}
+
+			return {
+				...patch,
+				books,
+				categories
+			};
+		} finally {
+			this.#db.close();
+		}
+	}
 }

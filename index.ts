@@ -94,6 +94,14 @@ const app = new Elysia()
 		return await patches.getPatch(patchVersion, parseInt(page), parseInt(pageSize), filter);
 	})
 
+	.get("/library/patches/:patch_version/export", async ({ params }) => {
+		const patches = new LibraryPatches();
+
+		const patchVersion = params.patch_version;
+
+		return await patches.getPatchBooksExport(patchVersion);
+	})
+
 	.get('/library/books', async ({ query }) => {
 		const books = new Books();
 
