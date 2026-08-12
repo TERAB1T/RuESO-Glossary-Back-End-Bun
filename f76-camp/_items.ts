@@ -53,97 +53,105 @@ export class Items {
 		order: string,
 		isPTS?: boolean
 	): Promise<ItemsResponse | null> {
-		const offset = (page - 1) * pageSize;
+		try {
+			const offset = (page - 1) * pageSize;
 
-		const conditions: string[] = [];
-		const params: any[] = [];
+			const conditions: string[] = [];
+			const params: any[] = [];
 
-		const useFilter = filter && filter.length > 2;
-		const baseTable = useFilter ? 'items_fts' : TABLE_NAME_ITEMS;
+			const useFilter = filter && filter.length > 2;
+			const baseTable = useFilter ? 'items_fts' : TABLE_NAME_ITEMS;
 
-		if (useFilter) {
-			const escapedFilter = escapeQuery(filter);
-			conditions.push(`${baseTable} MATCH ?`);
-			params.push(escapedFilter);
-		}
+			if (useFilter) {
+				const escapedFilter = escapeQuery(filter);
+				conditions.push(`${baseTable} MATCH ?`);
+				params.push(escapedFilter);
+			}
 
-		if (isPTS === true) {
-			conditions.push('i.isPTS = 1');
-		}
+			if (isPTS === true) {
+				conditions.push('i.isPTS = 1');
+			}
 
-		const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-		const orderClause = getF76CampOrderClause(order);
+			const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+			const orderClause = getF76CampOrderClause(order);
 
-		// Main query
-		const fromClause = useFilter
-			? `FROM ${TABLE_NAME_ITEMS} i JOIN items_fts ON items_fts.formId = i.formId`
-			: `FROM ${TABLE_NAME_ITEMS} i`;
+			// Main query
+			const fromClause = useFilter
+				? `FROM ${TABLE_NAME_ITEMS} i JOIN items_fts ON items_fts.formId = i.formId`
+				: `FROM ${TABLE_NAME_ITEMS} i`;
 
-		const items = this.#db.query<Item, any[]>(
-			`SELECT i.formId, i.nameEn, i.nameRu, i.mainImage, i.categoryFormId, i.subcategoryFormId, i.slug, i.isPTS
+			const items = this.#db.query<Item, any[]>(
+				`SELECT i.formId, i.nameEn, i.nameRu, i.mainImage, i.categoryFormId, i.subcategoryFormId, i.slug, i.isPTS
 			${fromClause}
 			${whereClause}
 			${orderClause}
 			LIMIT ? OFFSET ?`
-		).all(...params, pageSize, offset);
+			).all(...params, pageSize, offset);
 
-		// Count total items
-		const countFromClause = useFilter
-			? `FROM items_fts JOIN ${TABLE_NAME_ITEMS} i ON items_fts.formId = i.formId`
-			: `FROM ${TABLE_NAME_ITEMS} i`;
+			// Count total items
+			const countFromClause = useFilter
+				? `FROM items_fts JOIN ${TABLE_NAME_ITEMS} i ON items_fts.formId = i.formId`
+				: `FROM ${TABLE_NAME_ITEMS} i`;
 
-		const totalItems = (this.#db.query<{ count: number }, any[]>(
-			`SELECT COUNT(*) AS count
+			const totalItems = (this.#db.query<{ count: number }, any[]>(
+				`SELECT COUNT(*) AS count
 			${countFromClause}
 			${whereClause}`
-		).get(...params) as { count: number }).count;
+			).get(...params) as { count: number }).count;
 
-		return {
-			items,
-			pagination: {
-				page,
-				page_size: pageSize,
-				total_items: totalItems,
-				total_pages: Math.ceil(totalItems / pageSize)
-			}
-		};
+			return {
+				items,
+				pagination: {
+					page,
+					page_size: pageSize,
+					total_items: totalItems,
+					total_pages: Math.ceil(totalItems / pageSize)
+				}
+			};
+		} finally {
+			this.#db.close();
+		}
 	}
 
 	async getItem(itemFormId: string): Promise<ItemWithRelations | null> {
-		const item = this.#db.query<Item & { camp: boolean; shelter: boolean; workshop: boolean; campOwned: boolean; campMaxFormId: string | null; campMaxValue: number | null; workshopMaxFormId: string | null; workshopMaxValue: number | null; carryWeight: number | null; requiresPower: boolean; powerRequired: number; powerConnectable: boolean; powerGenerated: number; powerRadiated: number; learnConditions: string | null; produces: string | null; display: string | null; unlockEntitlements: string | null; recipeFormId: string }, [string]>(
-			`SELECT * FROM ${TABLE_NAME_ITEMS} WHERE formId = ?`
-		).get(itemFormId);
+		try {
+			const item = this.#db.query<Item & { camp: boolean; shelter: boolean; workshop: boolean; campOwned: boolean; campMaxFormId: string | null; campMaxValue: number | null; workshopMaxFormId: string | null; workshopMaxValue: number | null; carryWeight: number | null; requiresPower: boolean; powerRequired: number; powerConnectable: boolean; powerGenerated: number; powerRadiated: number; learnConditions: string | null; produces: string | null; display: string | null; unlockEntitlements: string | null; recipeFormId: string }, [string]>(
+				`SELECT * FROM ${TABLE_NAME_ITEMS} WHERE formId = ?`
+			).get(itemFormId);
 
-		if (!item) return null;
+			if (!item) return null;
 
-		if (item.screenshots && typeof item.screenshots === 'string')
-			item.screenshots = item.screenshots.split(';');
+			if (item.screenshots && typeof item.screenshots === 'string')
+				item.screenshots = item.screenshots.split(';');
 
-		const category = item.categoryFormId
-			? this.#db.query<Pick<Category, 'formId' | 'nameEn' | 'nameRu' | 'slug'>, [string]>(
-				`SELECT formId, nameEn, nameRu, slug FROM ${TABLE_NAME_CATEGORIES} WHERE formId = ?`
-			).get(item.categoryFormId)
-			: null;
+			const category = item.categoryFormId
+				? this.#db.query<Pick<Category, 'formId' | 'nameEn' | 'nameRu' | 'slug'>, [string]>(
+					`SELECT formId, nameEn, nameRu, slug FROM ${TABLE_NAME_CATEGORIES} WHERE formId = ?`
+				).get(item.categoryFormId)
+				: null;
 
-		const subcategory = item.subcategoryFormId
-			? this.#db.query<Pick<Subcategory, 'formId' | 'nameEn' | 'nameRu' | 'slug'>, [string]>(
-				`SELECT formId, nameEn, nameRu, slug FROM ${TABLE_NAME_SUBCATEGORIES} WHERE formId = ?`
-			).get(item.subcategoryFormId)
-			: null;
+			const subcategory = item.subcategoryFormId
+				? this.#db.query<Pick<Subcategory, 'formId' | 'nameEn' | 'nameRu' | 'slug'>, [string]>(
+					`SELECT formId, nameEn, nameRu, slug FROM ${TABLE_NAME_SUBCATEGORIES} WHERE formId = ?`
+				).get(item.subcategoryFormId)
+				: null;
 
-		const { unlockEntitlements, ...itemWithoutRawEntitlements } = item;
+			const { unlockEntitlements, ...itemWithoutRawEntitlements } = item;
 
-		return {
-			...itemWithoutRawEntitlements,
-			learnConditions: item.learnConditions ? JSON.parse(item.learnConditions) : null,
-			produces: item.produces ? JSON.parse(item.produces) : null,
-			display: item.display ? JSON.parse(item.display) : null,
-			category: category || null,
-			subcategory: subcategory || null,
-			unlockedByEntitlements: this.#resolveUnlockedByEntitlements(unlockEntitlements),
-			recipe: item.recipeFormId ? this.#resolveRecipe(item.recipeFormId) : null,
-			recipeItems: item.recipeFormId ? this.#resolveRecipeItems(item.recipeFormId, item.formId) : []
-		};
+			return {
+				...itemWithoutRawEntitlements,
+				learnConditions: item.learnConditions ? JSON.parse(item.learnConditions) : null,
+				produces: item.produces ? JSON.parse(item.produces) : null,
+				display: item.display ? JSON.parse(item.display) : null,
+				category: category || null,
+				subcategory: subcategory || null,
+				unlockedByEntitlements: this.#resolveUnlockedByEntitlements(unlockEntitlements),
+				recipe: item.recipeFormId ? this.#resolveRecipe(item.recipeFormId) : null,
+				recipeItems: item.recipeFormId ? this.#resolveRecipeItems(item.recipeFormId, item.formId) : []
+			};
+		} finally {
+			this.#db.close();
+		}
 	}
 
 	#ensureAtxAttached() {

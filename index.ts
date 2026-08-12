@@ -24,8 +24,14 @@ const SOCKET_PATH = '/tmp/apiRueso.sock';
 
 const LIBRARY_PAGE_SIZE = 50;
 const ATX_PAGE_SIZE = 15;
+const MAX_PAGE_SIZE = 200;
 
 const app = new Elysia()
+	.onError(({ error, set }) => {
+		console.error(error);
+		set.status = 500;
+		return { error: "Internal Server Error" };
+	})
 	.use(cors({
 		origin: [
 			"http://rueso.ru",
@@ -61,6 +67,7 @@ const app = new Elysia()
 
 		if (!isInteger(page)) page = 1;
 		if (!isInteger(pageSize)) pageSize = LIBRARY_PAGE_SIZE;
+		else if (parseInt(pageSize) > MAX_PAGE_SIZE) pageSize = MAX_PAGE_SIZE;
 
 		if (!isInteger(categoryId)) return {};
 
@@ -82,6 +89,7 @@ const app = new Elysia()
 
 		if (!isInteger(page)) page = 1;
 		if (!isInteger(pageSize)) pageSize = LIBRARY_PAGE_SIZE;
+		else if (parseInt(pageSize) > MAX_PAGE_SIZE) pageSize = MAX_PAGE_SIZE;
 
 		return await patches.getPatch(patchVersion, parseInt(page), parseInt(pageSize), filter);
 	})
@@ -96,6 +104,7 @@ const app = new Elysia()
 
 		if (!isInteger(page)) page = 1;
 		if (!isInteger(pageSize)) pageSize = LIBRARY_PAGE_SIZE;
+		else if (parseInt(pageSize) > MAX_PAGE_SIZE) pageSize = MAX_PAGE_SIZE;
 
 		if (ids.length) return await books.getBooksWithIds(ids);
 
@@ -146,6 +155,7 @@ const app = new Elysia()
 
 		if (!isInteger(page)) page = 1;
 		if (!isInteger(pageSize)) pageSize = ATX_PAGE_SIZE;
+		else if (parseInt(pageSize) > MAX_PAGE_SIZE) pageSize = MAX_PAGE_SIZE;
 		if (!F76ATX_VALID_SORT_ORDERS.includes(order) && order) order = F76ATX_VALID_SORT_ORDERS[0];
 
 		if (!isHex(categoryFormId)) {
@@ -182,6 +192,7 @@ const app = new Elysia()
 
 		if (!isInteger(page)) page = 1;
 		if (!isInteger(pageSize)) pageSize = ATX_PAGE_SIZE;
+		else if (parseInt(pageSize) > MAX_PAGE_SIZE) pageSize = MAX_PAGE_SIZE;
 		if (!F76ATX_VALID_SORT_ORDERS.includes(order) && order) order = F76ATX_VALID_SORT_ORDERS[0];
 
 		if (!isHex(subcategoryFormId)) {
@@ -217,6 +228,7 @@ const app = new Elysia()
 
 		if (!isInteger(page)) page = 1;
 		if (!isInteger(pageSize)) pageSize = ATX_PAGE_SIZE;
+		else if (parseInt(pageSize) > MAX_PAGE_SIZE) pageSize = MAX_PAGE_SIZE;
 		if (!F76ATX_VALID_SORT_ORDERS.includes(order) && order) order = F76ATX_VALID_SORT_ORDERS[0];
 
 		const result = await items.getItems(
@@ -248,7 +260,7 @@ const app = new Elysia()
 		const lastModified = await getFileLastModifiedDate(F76ATX_DB_PATH);
 		return { lastModified };
 	})
-	
+
 
 	// F76 C.A.M.P.
 
@@ -269,6 +281,7 @@ const app = new Elysia()
 
 		if (!isInteger(page)) page = 1;
 		if (!isInteger(pageSize)) pageSize = ATX_PAGE_SIZE;
+		else if (parseInt(pageSize) > MAX_PAGE_SIZE) pageSize = MAX_PAGE_SIZE;
 		if (!F76CAMP_VALID_SORT_ORDERS.includes(order) && order) order = F76CAMP_VALID_SORT_ORDERS[0];
 
 		if (!isHex(categoryFormId)) {
@@ -303,6 +316,7 @@ const app = new Elysia()
 
 		if (!isInteger(page)) page = 1;
 		if (!isInteger(pageSize)) pageSize = ATX_PAGE_SIZE;
+		else if (parseInt(pageSize) > MAX_PAGE_SIZE) pageSize = MAX_PAGE_SIZE;
 		if (!F76CAMP_VALID_SORT_ORDERS.includes(order) && order) order = F76CAMP_VALID_SORT_ORDERS[0];
 
 		if (!isHex(subcategoryFormId)) {
@@ -336,6 +350,7 @@ const app = new Elysia()
 
 		if (!isInteger(page)) page = 1;
 		if (!isInteger(pageSize)) pageSize = ATX_PAGE_SIZE;
+		else if (parseInt(pageSize) > MAX_PAGE_SIZE) pageSize = MAX_PAGE_SIZE;
 		if (!F76CAMP_VALID_SORT_ORDERS.includes(order) && order) order = F76CAMP_VALID_SORT_ORDERS[0];
 
 		const result = await items.getItems(

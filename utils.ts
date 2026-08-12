@@ -1,7 +1,7 @@
 import { escape } from "html-escaper";
 
 export function escapeQuery(query: string): string {
-	let escaped = decodeURIComponent(query).replace(/"/g, '""').replace(/ /g, ' ');
+	let escaped = query.replace(/"/g, '""').replace(/ /g, ' ');
 	escaped = escaped.replace(/[‘’]/g, "'").replace(/[“”„]/g, '""');
 	return `"${escaped}"`;
 }
@@ -29,9 +29,11 @@ export function isHex(value: any): boolean {
 	return typeof value === 'string' && /^[0-9a-f]+$/i.test(value);
 }
 
+const MAX_IDS = 200;
+
 export function parseIds(ids: unknown): number[] {
 	if (typeof ids === "string" && /^[\d,]+$/.test(ids)) {
-		return ids.split(",").filter(x => x !== "").map(Number);
+		return ids.split(",").filter(x => x !== "").map(Number).slice(0, MAX_IDS);
 	}
 
 	return [];
