@@ -110,12 +110,14 @@ export class GlossarySearch {
 		const queryConditions: string[] = [];
 		const params: string[] = [];
 
-		if (/[а-яА-Я]/.test(this.#searchValue)) {
-			queryConditions.push('ru MATCH ?');
-			params.push(this.#escapeQuery(this.#searchValue));
-		} else {
-			queryConditions.push(`${TABLE_NAME} MATCH ?`);
-			params.push(`en:${this.#escapeQuery(this.#searchValue)} OR ru:${this.#escapeQuery(this.#searchValue)}`);
+		if (this.#searchValue) {
+			if (/[а-яА-Я]/.test(this.#searchValue)) {
+				queryConditions.push('ru MATCH ?');
+				params.push(this.#escapeQuery(this.#searchValue));
+			} else {
+				queryConditions.push(`${TABLE_NAME} MATCH ?`);
+				params.push(`en:${this.#escapeQuery(this.#searchValue)} OR ru:${this.#escapeQuery(this.#searchValue)}`);
+			}
 		}
 
 		if (this.#filters[1]) {
