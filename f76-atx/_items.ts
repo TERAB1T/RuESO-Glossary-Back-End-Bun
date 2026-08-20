@@ -1,5 +1,5 @@
 import { Database } from "bun:sqlite";
-import { DB_PATH, TABLE_NAME_ITEMS, TABLE_NAME_CATEGORIES, TABLE_NAME_SUBCATEGORIES } from "./constants";
+import { DB_PATH, TABLE_NAME_ITEMS, TABLE_NAME_CATEGORIES, TABLE_NAME_SUBCATEGORIES, TABLE_NAME_ACQUISITION_SOURCES } from "./constants";
 import {
 	DB_PATH as CAMP_DB_PATH,
 	TABLE_NAME_ITEMS as CAMP_TABLE_NAME_ITEMS,
@@ -11,6 +11,7 @@ import { escapeQuery, getF76AtxOrderClause } from "../utils";
 import type {
 	Category,
 	Subcategory,
+	AcquisitionSource,
 	Item,
 	ItemsResponse,
 	ItemWithRelations,
@@ -136,10 +137,17 @@ export class Items {
 				).get(item.subcategoryFormId)
 				: null;
 
+			const acquisitionSource = item.acquisitionSourceId
+				? this.#db.query<Pick<AcquisitionSource, 'type' | 'nameRu' | 'subtitleRu' | 'slug'>, [number]>(
+					`SELECT type, nameRu, subtitleRu, slug FROM ${TABLE_NAME_ACQUISITION_SOURCES} WHERE id = ?`
+				).get(item.acquisitionSourceId)
+				: null;
+
 			return {
 				...item,
 				category: category || null,
 				subcategory: subcategory || null,
+				acquisitionSource: acquisitionSource || null,
 				campUnlockedItems: this.#resolveCampUnlockedItems(item.campUnlockedItems)
 			};
 		} finally {

@@ -9,6 +9,7 @@ import { Books } from "./library/_books";
 
 import { Categories as F76AtxCategories } from "./f76-atx/_categories";
 import { Items as F76AtxItems } from "./f76-atx/_items";
+import { AcquisitionSources as F76AtxAcquisitionSources } from "./f76-atx/_acquisitionSources";
 
 import { Categories as F76CampCategories } from "./f76-camp/_categories";
 import { Items as F76CampItems } from "./f76-camp/_items";
@@ -16,7 +17,7 @@ import { Items as F76CampItems } from "./f76-camp/_items";
 import { DB_PATH as LIBRARY_DB_PATH } from "./library/constants";
 import { TES_DB_PATH as GLOSSARY_TES_DB_PATH } from "./glossary/constants";
 import { FALLOUT_DB_PATH as GLOSSARY_FALLOUT_DB_PATH } from "./glossary/constants";
-import { DB_PATH as F76ATX_DB_PATH, VALID_SORT_ORDERS as F76ATX_VALID_SORT_ORDERS } from "./f76-atx/constants";
+import { DB_PATH as F76ATX_DB_PATH, VALID_SORT_ORDERS as F76ATX_VALID_SORT_ORDERS, VALID_ACQUISITION_TYPES as F76ATX_VALID_ACQUISITION_TYPES } from "./f76-atx/constants";
 import { DB_PATH as F76CAMP_DB_PATH, VALID_SORT_ORDERS as F76CAMP_VALID_SORT_ORDERS } from "./f76-camp/constants";
 
 const isWindows = process.platform === 'win32';
@@ -209,6 +210,85 @@ const app = new Elysia()
 
 		const result = await categories.getSubcategoryItems(
 			subcategoryFormId,
+			parseInt(page),
+			parseInt(pageSize),
+			filter,
+			order,
+			isPTS,
+			hasSupport
+		);
+
+		if (!result) {
+			return {};
+		}
+
+		return result;
+	})
+
+	.get("/f76/atomicshop/acquisition-sources", async () => {
+		const acquisitionSources = new F76AtxAcquisitionSources();
+		return await acquisitionSources.getAcquisitionSources();
+	})
+
+	.get("/f76/atomicshop/acquisition-types/:type", async ({ params, query }) => {
+		const acquisitionSources = new F76AtxAcquisitionSources();
+
+		const type = params.type;
+		const isPTS = query.is_pts === '1' || query.is_pts === 'true';
+		const hasSupport = query.has_support === '1' || query.has_support === 'true';
+		let page: any = query.page;
+		let pageSize: any = query.page_size;
+		let filter: any = query.filter;
+		let order: any = query.sort_order;
+
+		if (!isInteger(page)) page = 1;
+		if (!isInteger(pageSize)) pageSize = ATX_PAGE_SIZE;
+		else if (parseInt(pageSize) > MAX_PAGE_SIZE) pageSize = MAX_PAGE_SIZE;
+		if (!F76ATX_VALID_SORT_ORDERS.includes(order) && order) order = F76ATX_VALID_SORT_ORDERS[0];
+
+		if (!F76ATX_VALID_ACQUISITION_TYPES.includes(type)) {
+			return {};
+		}
+
+		const result = await acquisitionSources.getTypeItems(
+			type,
+			parseInt(page),
+			parseInt(pageSize),
+			filter,
+			order,
+			isPTS,
+			hasSupport
+		);
+
+		if (!result) {
+			return {};
+		}
+
+		return result;
+	})
+
+	.get("/f76/atomicshop/acquisition-sources/:acquisition_source_id", async ({ params, query }) => {
+		const acquisitionSources = new F76AtxAcquisitionSources();
+
+		const acquisitionSourceId = params.acquisition_source_id;
+		const isPTS = query.is_pts === '1' || query.is_pts === 'true';
+		const hasSupport = query.has_support === '1' || query.has_support === 'true';
+		let page: any = query.page;
+		let pageSize: any = query.page_size;
+		let filter: any = query.filter;
+		let order: any = query.sort_order;
+
+		if (!isInteger(page)) page = 1;
+		if (!isInteger(pageSize)) pageSize = ATX_PAGE_SIZE;
+		else if (parseInt(pageSize) > MAX_PAGE_SIZE) pageSize = MAX_PAGE_SIZE;
+		if (!F76ATX_VALID_SORT_ORDERS.includes(order) && order) order = F76ATX_VALID_SORT_ORDERS[0];
+
+		if (!isInteger(acquisitionSourceId)) {
+			return {};
+		}
+
+		const result = await acquisitionSources.getSourceItems(
+			parseInt(acquisitionSourceId),
 			parseInt(page),
 			parseInt(pageSize),
 			filter,

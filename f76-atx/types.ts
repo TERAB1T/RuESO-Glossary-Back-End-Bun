@@ -24,6 +24,23 @@ export interface CategoryWithSubcategories extends Category {
 	subcategories: Subcategory[];
 }
 
+export interface AcquisitionSource {
+	id: number;
+	slug: string;
+	type: string;
+	nameEn: string | null;
+	nameRu: string | null;
+	subtitleEn: string | null;
+	subtitleRu: string | null;
+	startDate: number | null;
+	endDate: number | null;
+}
+
+export interface AcquisitionSourcesByType {
+	type: string;
+	sources: AcquisitionSource[];
+}
+
 export interface CampUnlockedItem {
 	formId: string;
 	nameEn: string | null;
@@ -49,6 +66,8 @@ export interface Item {
 	supportItem: string | null;
 	supportBundles: string | null;
 	campUnlockedItems: string | null;
+	acquisitionSourceId: number | null;
+	acquisitionSourceType: string;
 	rarity: number | null;
 	slug: string | null;
 	orderByName: number;
@@ -74,6 +93,18 @@ export interface SubcategoryItemsResponse {
 	pagination: PaginationInfo;
 }
 
+export interface AcquisitionTypeItemsResponse {
+	type: string;
+	items: Item[];
+	pagination: PaginationInfo;
+}
+
+export interface AcquisitionSourceItemsResponse {
+	acquisitionSource: AcquisitionSource;
+	items: Item[];
+	pagination: PaginationInfo;
+}
+
 export interface ItemsResponse {
 	items: Item[];
 	pagination: PaginationInfo;
@@ -82,5 +113,6 @@ export interface ItemsResponse {
 export interface ItemWithRelations extends Omit<Item, 'campUnlockedItems'> {
 	category: Pick<Category, 'formId' | 'nameEn' | 'nameRu' | 'slug'> | null;
 	subcategory: Pick<Subcategory, 'formId' | 'nameEn' | 'nameRu' | 'slug'> | null;
+	acquisitionSource: Pick<AcquisitionSource, 'type' | 'nameRu' | 'subtitleRu' | 'slug'> | null;
 	campUnlockedItems: CampUnlockedItem[] | null;
 }
