@@ -24,7 +24,7 @@ const isWindows = process.platform === 'win32';
 const SOCKET_PATH = '/tmp/apiRueso.sock';
 
 const LIBRARY_PAGE_SIZE = 50;
-const ATX_PAGE_SIZE = 15;
+const ATX_PAGE_SIZE = 18;
 const MAX_PAGE_SIZE = 200;
 
 const app = new Elysia()
@@ -225,12 +225,12 @@ const app = new Elysia()
 		return result;
 	})
 
-	.get("/f76/atomicshop/acquisition-sources", async () => {
+	.get("/f76/atomicshop/acquisition", async () => {
 		const acquisitionSources = new F76AtxAcquisitionSources();
 		return await acquisitionSources.getAcquisitionSources();
 	})
 
-	.get("/f76/atomicshop/acquisition-types/:type", async ({ params, query }) => {
+	.get("/f76/atomicshop/acquisition/:type", async ({ params, query }) => {
 		const acquisitionSources = new F76AtxAcquisitionSources();
 
 		const type = params.type;
@@ -267,10 +267,11 @@ const app = new Elysia()
 		return result;
 	})
 
-	.get("/f76/atomicshop/acquisition-sources/:acquisition_source_id", async ({ params, query }) => {
+	.get("/f76/atomicshop/acquisition/:type/:number", async ({ params, query }) => {
 		const acquisitionSources = new F76AtxAcquisitionSources();
 
-		const acquisitionSourceId = params.acquisition_source_id;
+		const type = params.type;
+		const number = params.number;
 		const isPTS = query.is_pts === '1' || query.is_pts === 'true';
 		const hasSupport = query.has_support === '1' || query.has_support === 'true';
 		let page: any = query.page;
@@ -283,12 +284,13 @@ const app = new Elysia()
 		else if (parseInt(pageSize) > MAX_PAGE_SIZE) pageSize = MAX_PAGE_SIZE;
 		if (!F76ATX_VALID_SORT_ORDERS.includes(order) && order) order = F76ATX_VALID_SORT_ORDERS[0];
 
-		if (!isInteger(acquisitionSourceId)) {
+		if (!F76ATX_VALID_ACQUISITION_TYPES.includes(type) || !isInteger(number)) {
 			return {};
 		}
 
 		const result = await acquisitionSources.getSourceItems(
-			parseInt(acquisitionSourceId),
+			type,
+			parseInt(number),
 			parseInt(page),
 			parseInt(pageSize),
 			filter,

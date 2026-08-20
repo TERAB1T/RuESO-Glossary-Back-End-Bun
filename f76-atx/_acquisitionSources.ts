@@ -114,7 +114,8 @@ export class AcquisitionSources {
 	}
 
 	async getSourceItems(
-		sourceId: number,
+		type: string,
+		number: number,
 		page: number,
 		pageSize: number,
 		filter: string,
@@ -125,9 +126,9 @@ export class AcquisitionSources {
 		try {
 			const offset = (page - 1) * pageSize;
 
-			const acquisitionSource = this.#db.query<AcquisitionSource, [number]>(
-				`SELECT * FROM ${TABLE_NAME_ACQUISITION_SOURCES} WHERE id = ?`
-			).get(sourceId);
+			const acquisitionSource = this.#db.query<AcquisitionSource, [string, number]>(
+				`SELECT * FROM ${TABLE_NAME_ACQUISITION_SOURCES} WHERE type = ? AND number = ?`
+			).get(type, number);
 
 			if (!acquisitionSource) return null;
 
@@ -143,8 +144,11 @@ export class AcquisitionSources {
 				params.push(escapedFilter);
 			}
 
-			conditions.push('i.acquisitionSourceId = ?');
-			params.push(sourceId);
+			conditions.push('i.acquisitionSourceType = ?');
+			params.push(type);
+
+			conditions.push('i.acquisitionSourceNumber = ?');
+			params.push(number);
 
 			if (isPTS === true) {
 				conditions.push('i.isPTS = 1');

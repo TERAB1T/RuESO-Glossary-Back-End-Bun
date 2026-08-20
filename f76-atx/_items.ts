@@ -137,10 +137,10 @@ export class Items {
 				).get(item.subcategoryFormId)
 				: null;
 
-			const acquisitionSource = item.acquisitionSourceId
-				? this.#db.query<Pick<AcquisitionSource, 'type' | 'nameRu' | 'subtitleRu' | 'slug'>, [number]>(
-					`SELECT type, nameRu, subtitleRu, slug FROM ${TABLE_NAME_ACQUISITION_SOURCES} WHERE id = ?`
-				).get(item.acquisitionSourceId)
+			const acquisitionSource = item.acquisitionSourceNumber
+				? this.#db.query<Pick<AcquisitionSource, 'type' | 'number' | 'nameRu' | 'slug'>, [string, number]>(
+					`SELECT type, number, nameRu, slug FROM ${TABLE_NAME_ACQUISITION_SOURCES} WHERE type = ? AND number = ?`
+				).get(item.acquisitionSourceType, item.acquisitionSourceNumber)
 				: null;
 
 			return {

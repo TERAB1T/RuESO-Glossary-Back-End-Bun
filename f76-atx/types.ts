@@ -28,10 +28,9 @@ export interface AcquisitionSource {
 	id: number;
 	slug: string;
 	type: string;
+	number: number;
 	nameEn: string | null;
 	nameRu: string | null;
-	subtitleEn: string | null;
-	subtitleRu: string | null;
 	startDate: number | null;
 	endDate: number | null;
 }
@@ -66,8 +65,8 @@ export interface Item {
 	supportItem: string | null;
 	supportBundles: string | null;
 	campUnlockedItems: string | null;
-	acquisitionSourceId: number | null;
 	acquisitionSourceType: string;
+	acquisitionSourceNumber: number | null;
 	rarity: number | null;
 	slug: string | null;
 	orderByName: number;
@@ -113,6 +112,6 @@ export interface ItemsResponse {
 export interface ItemWithRelations extends Omit<Item, 'campUnlockedItems'> {
 	category: Pick<Category, 'formId' | 'nameEn' | 'nameRu' | 'slug'> | null;
 	subcategory: Pick<Subcategory, 'formId' | 'nameEn' | 'nameRu' | 'slug'> | null;
-	acquisitionSource: Pick<AcquisitionSource, 'type' | 'nameRu' | 'subtitleRu' | 'slug'> | null;
+	acquisitionSource: Pick<AcquisitionSource, 'type' | 'number' | 'nameRu' | 'slug'> | null;
 	campUnlockedItems: CampUnlockedItem[] | null;
 }
