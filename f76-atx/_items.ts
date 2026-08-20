@@ -137,7 +137,7 @@ export class Items {
 				).get(item.subcategoryFormId)
 				: null;
 
-			const acquisitionSource = item.acquisitionSourceNumber
+			const acquisitionSource = item.acquisitionSourceNumber != null
 				? this.#db.query<Pick<AcquisitionSource, 'type' | 'number' | 'nameRu' | 'slug'>, [string, number]>(
 					`SELECT type, number, nameRu, slug FROM ${TABLE_NAME_ACQUISITION_SOURCES} WHERE type = ? AND number = ?`
 				).get(item.acquisitionSourceType, item.acquisitionSourceNumber)
