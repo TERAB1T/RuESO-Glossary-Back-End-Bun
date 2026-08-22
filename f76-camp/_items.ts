@@ -115,7 +115,7 @@ export class Items {
 
 	async getItem(itemFormId: string): Promise<ItemWithRelations | null> {
 		try {
-			const item = this.#db.query<Item & { camp: boolean; shelter: boolean; workshop: boolean; campOwned: boolean; campMaxFormId: string | null; campMaxValue: number | null; workshopMaxFormId: string | null; workshopMaxValue: number | null; carryWeight: number | null; requiresPower: boolean; powerRequired: number; powerConnectable: boolean; powerGenerated: number; powerRadiated: number; learnConditions: string | null; produces: string | null; display: string | null; unlockEntitlements: string | null; recipeFormId: string }, [string]>(
+			const item = this.#db.query<Item & { camp: boolean; shelter: boolean; workshop: boolean; campOwned: boolean; campMaxFormId: string | null; campMaxValue: number | null; workshopMaxFormId: string | null; workshopMaxValue: number | null; carryWeight: number | null; requiresPower: boolean; powerRequired: number; powerConnectable: boolean; powerGenerated: number; powerRadiated: number; learnConditions: string | null; produces: string | null; display: string | null; buffs: string | null; unlockEntitlements: string | null; recipeFormId: string }, [string]>(
 				`SELECT * FROM ${TABLE_NAME_ITEMS} WHERE formId = ?`
 			).get(itemFormId);
 
@@ -143,6 +143,7 @@ export class Items {
 				learnConditions: item.learnConditions ? JSON.parse(item.learnConditions) : null,
 				produces: item.produces ? JSON.parse(item.produces) : null,
 				display: item.display ? JSON.parse(item.display) : null,
+				buffs: item.buffs ? JSON.parse(item.buffs) : null,
 				category: category || null,
 				subcategory: subcategory || null,
 				unlockedByEntitlements: this.#resolveUnlockedByEntitlements(unlockEntitlements),
