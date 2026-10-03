@@ -79,16 +79,25 @@ export class GlossarySearch {
 			const results = db.query(finalQuery).all(params);
 			console.log(`Fetching data: ${(Date.now() - startTime) / 1000} seconds`);
 
-			const startCountTime = Date.now();
-			const { query: countQuery, params: countParams } = this.#buildQuery(true);
-			const totalRecords = db.query(countQuery).get(countParams) as { "COUNT(*)": number };
+			// A short page means every match from #start on is already fetched, so the total is
+			// known without a COUNT, which would repeat the whole FTS lookup (costly for long phrases).
+			// An empty page past the first one may just be out of range, so it still needs a COUNT.
+			let total: number;
+			if (results.length < this.#length && (this.#start === 0 || results.length > 0)) {
+				total = this.#start + results.length;
+			} else {
+				const startCountTime = Date.now();
+				const { query: countQuery, params: countParams } = this.#buildQuery(true);
+				const totalRecords = db.query(countQuery).get(countParams) as { "COUNT(*)": number };
+				total = totalRecords ? totalRecords["COUNT(*)"] : 0;
 
-			console.log(`Fetching total records: ${(Date.now() - startCountTime) / 1000} seconds`);
+				console.log(`Fetching total records: ${(Date.now() - startCountTime) / 1000} seconds`);
+			}
 
 			return {
 				draw: this.#draw,
-				recordsTotal: totalRecords ? totalRecords["COUNT(*)"] : 0,
-				recordsFiltered: totalRecords ? totalRecords["COUNT(*)"] : 0,
+				recordsTotal: total,
+				recordsFiltered: total,
 				data: results.map((res: any) => ({
 					game: res.game,
 					en: prepareHtml(res.en),
@@ -133,7 +142,8 @@ export class GlossarySearch {
 			params.push(this.#escapeQuery(this.#filters[3]));
 		}
 
-		if (this.#games.length) {
+		// Selecting every game filters nothing but costs an extra FTS lookup over all rows.
+		if (this.#games.length && this.#games.length < this.#validGames.length) {
 			queryConditions.push(`${TABLE_NAME} MATCH ?`);
 			params.push(this.#games.map(game => `game:^${game.replace(" ", "")}`).join(' OR '));
 		}
