@@ -3,6 +3,7 @@ import { cors } from '@elysiajs/cors';
 import { isInteger, isHex, parseIds, getFileLastModifiedDate } from "./utils";
 
 import { GlossarySearch } from "./glossary/_search";
+import { GlossaryUpdated } from "./glossary/_updated";
 import { Categories as LibraryCategories } from "./library/_categories";
 import { Patches as LibraryPatches } from "./library/_patches";
 import { Books } from "./library/_books";
@@ -15,8 +16,6 @@ import { Categories as F76CampCategories } from "./f76-camp/_categories";
 import { Items as F76CampItems } from "./f76-camp/_items";
 
 import { DB_PATH as LIBRARY_DB_PATH } from "./library/constants";
-import { TES_DB_PATH as GLOSSARY_TES_DB_PATH } from "./glossary/constants";
-import { FALLOUT_DB_PATH as GLOSSARY_FALLOUT_DB_PATH } from "./glossary/constants";
 import { DB_PATH as F76ATX_DB_PATH, VALID_SORT_ORDERS as F76ATX_VALID_SORT_ORDERS, VALID_ACQUISITION_TYPES as F76ATX_VALID_ACQUISITION_TYPES } from "./f76-atx/constants";
 import { DB_PATH as F76CAMP_DB_PATH, VALID_SORT_ORDERS as F76CAMP_VALID_SORT_ORDERS } from "./f76-camp/constants";
 
@@ -135,13 +134,13 @@ const app = new Elysia()
 	})
 
 	.get("/glossary/tes/updated", async () => {
-		const lastModified = await getFileLastModifiedDate(GLOSSARY_TES_DB_PATH);
-		return { lastModified };
+		const glossaryUpdated = new GlossaryUpdated("tes");
+		return await glossaryUpdated.getUpdated();
 	})
 
 	.get("/glossary/fallout/updated", async () => {
-		const lastModified = await getFileLastModifiedDate(GLOSSARY_FALLOUT_DB_PATH);
-		return { lastModified };
+		const glossaryUpdated = new GlossaryUpdated("fallout");
+		return await glossaryUpdated.getUpdated();
 	})
 
 	// F76 Atomic Shop

@@ -1,8 +1,8 @@
 import { Database } from "bun:sqlite";
 import {
-	COLUMNS, TABLE_NAME,
-	TES_VALID_GAMES, TES_DB_PATH,
-	FALLOUT_VALID_GAMES, FALLOUT_DB_PATH
+	COLUMNS, TABLE_NAME, DEFAULT_SERVER,
+	TES_VALID_GAMES, TES_DB_PATHS, TES_SERVER_GAMES,
+	FALLOUT_VALID_GAMES, FALLOUT_DB_PATHS, FALLOUT_SERVER_GAMES
 } from "../glossary/constants";
 import { prepareHtml } from "../utils";
 
@@ -25,19 +25,22 @@ export class GlossarySearch {
 
 	constructor(query, game: string) {
 
-		if (game === 'fallout') {
-			this.#dbPath = FALLOUT_DB_PATH;
-			this.#validGames = FALLOUT_VALID_GAMES;
-		} else {
-			this.#dbPath = TES_DB_PATH;
-			this.#validGames = TES_VALID_GAMES;
-		}
+		const [dbPaths, serverGames] = game === 'fallout'
+			? [FALLOUT_DB_PATHS, FALLOUT_SERVER_GAMES]
+			: [TES_DB_PATHS, TES_SERVER_GAMES];
+		this.#validGames = game === 'fallout' ? FALLOUT_VALID_GAMES : TES_VALID_GAMES;
+
+		const requestedGames: string[] = (query.games || '').split(',');
+
+		// Only one server can be searched at a time; if a request names both, the first one wins.
+		const server = requestedGames.map(g => serverGames[g]?.[1]).find(Boolean) ?? DEFAULT_SERVER;
+		this.#dbPath = dbPaths[server];
 
 		this.#draw = query.draw || '1';
-		this.#start = parseInt(query.start || 0);
-		this.#length = Math.min(parseInt(query.length || 10) || 10, MAX_LENGTH);
+		this.#start = Math.max(parseInt(query.start) || 0, 0);
+		this.#length = Math.min(Math.max(parseInt(query.length) || 10, 1), MAX_LENGTH);
 		this.#searchValue = query["search[value]"] || "";
-		this.#games = this.#validateGames((query.games || '').split(','));
+		this.#games = this.#validateGames(requestedGames.map(g => serverGames[g]?.[0] ?? g));
 		this.#filters = COLUMNS.map((_, index) => query[`columns[${index}][search][value]`] || '');
 
 		this.#orderDir = (query["order[0][dir]"] || 'asc').toUpperCase();
@@ -63,7 +66,7 @@ export class GlossarySearch {
 	}
 
 	async searchTerm() {
-		const db = new Database(this.#dbPath);
+		const db = new Database(this.#dbPath, { readonly: true });
 
 		try {
 			const startTime = Date.now();
