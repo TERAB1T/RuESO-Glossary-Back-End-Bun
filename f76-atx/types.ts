@@ -102,6 +102,7 @@ export interface AcquisitionTypeItemsResponse {
 export interface AcquisitionSourceItemsResponse {
 	acquisitionSource: AcquisitionSource;
 	items: Item[];
+	categories: Pick<Category, 'formId' | 'nameRu'>[];
 	pagination: PaginationInfo;
 }
 

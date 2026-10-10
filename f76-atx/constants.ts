@@ -7,3 +7,4 @@ export const TABLE_NAME_ACQUISITION_SOURCES = 'acquisition_sources';
 
 export const VALID_SORT_ORDERS = ['date_desc', 'date_asc', 'name_desc', 'name_asc'];
 export const VALID_ACQUISITION_TYPES = ['atx', 'season', 'miniseason'];
+export const GROUPED_ACQUISITION_TYPES = ['season', 'miniseason'];

@@ -1,5 +1,5 @@
 import { Database } from "bun:sqlite";
-import { DB_PATH, TABLE_NAME_ITEMS, TABLE_NAME_ACQUISITION_SOURCES } from "./constants";
+import { DB_PATH, TABLE_NAME_ITEMS, TABLE_NAME_CATEGORIES, TABLE_NAME_ACQUISITION_SOURCES, GROUPED_ACQUISITION_TYPES } from "./constants";
 import { escapeQuery, getF76AtxOrderClause } from "../utils";
 
 import type {
@@ -7,6 +7,7 @@ import type {
 	AcquisitionSourcesByType,
 	AcquisitionTypeItemsResponse,
 	AcquisitionSourceItemsResponse,
+	Category,
 	Item
 } from "./types";
 
@@ -159,14 +160,55 @@ export class AcquisitionSources {
 			}
 
 			const whereClause = `WHERE ${conditions.join(' AND ')}`;
-			const orderClause = getF76AtxOrderClause(order);
 
 			const fromClause = useFilter
 				? `FROM ${TABLE_NAME_ITEMS} i JOIN items_fts ON items_fts.formId = i.formId`
 				: `FROM ${TABLE_NAME_ITEMS} i`;
 
+			const selectColumns = 'i.formId, i.nameEn, i.nameRu, i.mainImage, i.categoryFormId, i.subcategoryFormId, i.slug, i.isPTS, i.supportItem, i.supportBundles';
+
+			// Seasons are small enough to show on a single page, grouped under category headers
+			if (GROUPED_ACQUISITION_TYPES.includes(type)) {
+				const orderClause = getF76AtxOrderClause(order).replace('ORDER BY', 'ORDER BY c.orderId ASC,');
+
+				const items = this.#db.query<Item, any[]>(
+					`SELECT ${selectColumns}
+				${fromClause}
+				JOIN ${TABLE_NAME_CATEGORIES} c ON c.formId = i.categoryFormId
+				${whereClause}
+				${orderClause}`
+				).all(...params);
+
+				const catIds = [...new Set(items.map(item => item.categoryFormId))];
+				let categories: Pick<Category, 'formId' | 'nameRu'>[] = [];
+
+				if (catIds.length !== 0) {
+					const catPlaceholders = catIds.map(() => '?').join(',');
+					categories = this.#db.query<Pick<Category, 'formId' | 'nameRu'>, any[]>(
+						`SELECT formId, nameRu
+					FROM ${TABLE_NAME_CATEGORIES}
+					WHERE formId IN (${catPlaceholders})
+					ORDER BY orderId ASC`
+					).all(...catIds);
+				}
+
+				return {
+					acquisitionSource,
+					items,
+					categories,
+					pagination: {
+						page: 1,
+						page_size: items.length,
+						total_items: items.length,
+						total_pages: 1
+					}
+				};
+			}
+
+			const orderClause = getF76AtxOrderClause(order);
+
 			const items = this.#db.query<Item, any[]>(
-				`SELECT i.formId, i.nameEn, i.nameRu, i.mainImage, i.categoryFormId, i.subcategoryFormId, i.slug, i.isPTS, i.supportItem, i.supportBundles
+				`SELECT ${selectColumns}
 			${fromClause}
 			${whereClause}
 			${orderClause}
@@ -186,6 +228,7 @@ export class AcquisitionSources {
 			return {
 				acquisitionSource,
 				items,
+				categories: [],
 				pagination: {
 					page,
 					page_size: pageSize,
