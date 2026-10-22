@@ -9,6 +9,11 @@ import { escapeQuery, prepareHtml } from "../utils";
 
 const MAX_LENGTH = 200;
 
+// Without a search term or column filters the total depends only on the DB file and the selected
+// games, and counting all ~900k rows takes ~230 ms — paid on every visit to the glossary page.
+// Keyed by connection: once a rebuilt DB is swapped in, getDb() returns a new one with an empty cache.
+const countCache = new WeakMap<Database, Map<string, number>>();
+
 export class GlossarySearch {
 	#draw: string;
 	#start: number;
@@ -85,8 +90,23 @@ export class GlossarySearch {
 		} else {
 			const startCountTime = Date.now();
 			const { query: countQuery, params: countParams } = this.#buildQuery(true);
-			const totalRecords = db.query(countQuery).get(countParams) as { "COUNT(*)": number };
-			total = totalRecords ? totalRecords["COUNT(*)"] : 0;
+
+			const isCacheable = !this.#searchValue && !this.#filters.some(Boolean);
+			const cacheKey = [countQuery, ...countParams].join("\0");
+			let cache = countCache.get(db);
+			const cached = isCacheable ? cache?.get(cacheKey) : undefined;
+
+			if (cached !== undefined) {
+				total = cached;
+			} else {
+				const totalRecords = db.query(countQuery).get(countParams) as { "COUNT(*)": number };
+				total = totalRecords ? totalRecords["COUNT(*)"] : 0;
+
+				if (isCacheable) {
+					if (!cache) countCache.set(db, cache = new Map());
+					cache.set(cacheKey, total);
+				}
+			}
 
 			console.log(`Fetching total records: ${(Date.now() - startCountTime) / 1000} seconds`);
 		}
