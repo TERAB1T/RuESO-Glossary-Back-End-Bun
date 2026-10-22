@@ -19,7 +19,7 @@ export class Categories {
 
 		const category = this.#db.query(`SELECT * FROM ${TABLE_NAME_CATEGORIES} WHERE id = ?`).get(categoryId);
 
-		if (!category) return {};
+		if (!category) return null;
 
 		let books: any[] = [];
 		let totalBooks: number = 0;

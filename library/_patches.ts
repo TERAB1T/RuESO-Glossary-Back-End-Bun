@@ -19,7 +19,7 @@ export class Patches {
 
 		const patch = this.#db.query(`SELECT * FROM ${TABLE_NAME_PATCHES} WHERE version = ?`).get(patchVersion);
 
-		if (!patch) return {};
+		if (!patch) return null;
 
 		let books: any[] = [];
 		let totalBooks: number = 0;
@@ -88,7 +88,7 @@ export class Patches {
 	async getPatchBooksExport(patchVersion: string) {
 		const patch = this.#db.query(`SELECT * FROM ${TABLE_NAME_PATCHES} WHERE version = ?`).get(patchVersion);
 
-		if (!patch) return {};
+		if (!patch) return null;
 
 		const books = this.#db.query(
 			`SELECT id, titleEn, titleRu, icon, slug, catId

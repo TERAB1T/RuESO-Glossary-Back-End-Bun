@@ -26,6 +26,11 @@ const LIBRARY_PAGE_SIZE = 50;
 const ATX_PAGE_SIZE = 18;
 const MAX_PAGE_SIZE = 200;
 
+const notFound = (set: { status?: number | string }) => {
+	set.status = 404;
+	return { error: "Not Found" };
+};
+
 const app = new Elysia()
 	.onError(({ error, set }) => {
 		console.error(error);
@@ -57,7 +62,7 @@ const app = new Elysia()
 		return await categories.getCategories();
 	})
 
-	.get("/library/categories/:category_id", async ({ params, query }) => {
+	.get("/library/categories/:category_id", async ({ params, query, set }) => {
 		const categories = new LibraryCategories();
 
 		const categoryId = params.category_id;
@@ -69,9 +74,10 @@ const app = new Elysia()
 		if (!isInteger(pageSize)) pageSize = LIBRARY_PAGE_SIZE;
 		else if (parseInt(pageSize) > MAX_PAGE_SIZE) pageSize = MAX_PAGE_SIZE;
 
-		if (!isInteger(categoryId)) return {};
+		if (!isInteger(categoryId)) return notFound(set);
 
-		return await categories.getCategory(parseInt(categoryId), parseInt(page), parseInt(pageSize), filter);
+		const result = await categories.getCategory(parseInt(categoryId), parseInt(page), parseInt(pageSize), filter);
+		return result ?? notFound(set);
 	})
 
 	.get("/library/patches", async () => {
@@ -79,7 +85,7 @@ const app = new Elysia()
 		return await patches.getPatches();
 	})
 
-	.get("/library/patches/:patch_version", async ({ params, query }) => {
+	.get("/library/patches/:patch_version", async ({ params, query, set }) => {
 		const patches = new LibraryPatches();
 
 		const patchVersion = params.patch_version;
@@ -91,15 +97,17 @@ const app = new Elysia()
 		if (!isInteger(pageSize)) pageSize = LIBRARY_PAGE_SIZE;
 		else if (parseInt(pageSize) > MAX_PAGE_SIZE) pageSize = MAX_PAGE_SIZE;
 
-		return await patches.getPatch(patchVersion, parseInt(page), parseInt(pageSize), filter);
+		const result = await patches.getPatch(patchVersion, parseInt(page), parseInt(pageSize), filter);
+		return result ?? notFound(set);
 	})
 
-	.get("/library/patches/:patch_version/export", async ({ params }) => {
+	.get("/library/patches/:patch_version/export", async ({ params, set }) => {
 		const patches = new LibraryPatches();
 
 		const patchVersion = params.patch_version;
 
-		return await patches.getPatchBooksExport(patchVersion);
+		const result = await patches.getPatchBooksExport(patchVersion);
+		return result ?? notFound(set);
 	})
 
 	.get('/library/books', async ({ query }) => {
@@ -119,13 +127,14 @@ const app = new Elysia()
 		return await books.getBooks(parseInt(page), parseInt(pageSize), filter);
 	})
 
-	.get('/library/books/:book_id', async ({ params }) => {
+	.get('/library/books/:book_id', async ({ params, set }) => {
 		const books = new Books();
 
 		const bookId = params.book_id;
-		if (!isInteger(bookId)) return {};
+		if (!isInteger(bookId)) return notFound(set);
 
-		return await books.getBook(parseInt(bookId));
+		const result = await books.getBook(parseInt(bookId));
+		return result ?? notFound(set);
 	})
 
 	.get("/library/updated", async () => {
@@ -150,7 +159,7 @@ const app = new Elysia()
 		return await categories.getCategories();
 	})
 
-	.get("/f76/atomicshop/categories/:category_form_id", async ({ params, query }) => {
+	.get("/f76/atomicshop/categories/:category_form_id", async ({ params, query, set }) => {
 		const categories = new F76AtxCategories();
 
 		const categoryFormId = params.category_form_id;
@@ -167,7 +176,7 @@ const app = new Elysia()
 		if (!F76ATX_VALID_SORT_ORDERS.includes(order) && order) order = F76ATX_VALID_SORT_ORDERS[0];
 
 		if (!isHex(categoryFormId)) {
-			return {};
+			return notFound(set);
 		}
 
 		const result = await categories.getCategoryItems(
@@ -180,14 +189,10 @@ const app = new Elysia()
 			hasSupport
 		);
 
-		if (!result) {
-			return {};
-		}
-
-		return result;
+		return result ?? notFound(set);
 	})
 
-	.get("/f76/atomicshop/subcategories/:subcategory_form_id", async ({ params, query }) => {
+	.get("/f76/atomicshop/subcategories/:subcategory_form_id", async ({ params, query, set }) => {
 		const categories = new F76AtxCategories();
 
 		const subcategoryFormId = params.subcategory_form_id;
@@ -204,7 +209,7 @@ const app = new Elysia()
 		if (!F76ATX_VALID_SORT_ORDERS.includes(order) && order) order = F76ATX_VALID_SORT_ORDERS[0];
 
 		if (!isHex(subcategoryFormId)) {
-			return {};
+			return notFound(set);
 		}
 
 		const result = await categories.getSubcategoryItems(
@@ -217,11 +222,7 @@ const app = new Elysia()
 			hasSupport
 		);
 
-		if (!result) {
-			return {};
-		}
-
-		return result;
+		return result ?? notFound(set);
 	})
 
 	.get("/f76/atomicshop/acquisition", async () => {
@@ -229,7 +230,7 @@ const app = new Elysia()
 		return await acquisitionSources.getAcquisitionSources();
 	})
 
-	.get("/f76/atomicshop/acquisition/:type", async ({ params, query }) => {
+	.get("/f76/atomicshop/acquisition/:type", async ({ params, query, set }) => {
 		const acquisitionSources = new F76AtxAcquisitionSources();
 
 		const type = params.type;
@@ -246,7 +247,7 @@ const app = new Elysia()
 		if (!F76ATX_VALID_SORT_ORDERS.includes(order) && order) order = F76ATX_VALID_SORT_ORDERS[0];
 
 		if (!F76ATX_VALID_ACQUISITION_TYPES.includes(type)) {
-			return {};
+			return notFound(set);
 		}
 
 		const result = await acquisitionSources.getTypeItems(
@@ -259,14 +260,10 @@ const app = new Elysia()
 			hasSupport
 		);
 
-		if (!result) {
-			return {};
-		}
-
-		return result;
+		return result ?? notFound(set);
 	})
 
-	.get("/f76/atomicshop/acquisition/:type/:number", async ({ params, query }) => {
+	.get("/f76/atomicshop/acquisition/:type/:number", async ({ params, query, set }) => {
 		const acquisitionSources = new F76AtxAcquisitionSources();
 
 		const type = params.type;
@@ -284,7 +281,7 @@ const app = new Elysia()
 		if (!F76ATX_VALID_SORT_ORDERS.includes(order) && order) order = F76ATX_VALID_SORT_ORDERS[0];
 
 		if (!F76ATX_VALID_ACQUISITION_TYPES.includes(type) || !isInteger(number)) {
-			return {};
+			return notFound(set);
 		}
 
 		const result = await acquisitionSources.getSourceItems(
@@ -298,14 +295,10 @@ const app = new Elysia()
 			hasSupport
 		);
 
-		if (!result) {
-			return {};
-		}
-
-		return result;
+		return result ?? notFound(set);
 	})
 
-	.get('/f76/atomicshop/items', async ({ query }) => {
+	.get('/f76/atomicshop/items', async ({ query, set }) => {
 		const items = new F76AtxItems();
 
 		const isPTS = query.is_pts === '1' || query.is_pts === 'true';
@@ -329,20 +322,17 @@ const app = new Elysia()
 			hasSupport
 		);
 
-		if (!result) {
-			return {};
-		}
-
-		return result;
+		return result ?? notFound(set);
 	})
 
-	.get('/f76/atomicshop/items/:item_form_id', async ({ params }) => {
+	.get('/f76/atomicshop/items/:item_form_id', async ({ params, set }) => {
 		const items = new F76AtxItems();
 
 		const itemId = params.item_form_id;
-		if (!isHex(itemId)) return {};
+		if (!isHex(itemId)) return notFound(set);
 
-		return await items.getItem(itemId);
+		const result = await items.getItem(itemId);
+		return result ?? notFound(set);
 	})
 
 	.get("/f76/atomicshop/updated", async () => {
@@ -358,7 +348,7 @@ const app = new Elysia()
 		return await categories.getCategories();
 	})
 
-	.get("/f76/camp/categories/:category_form_id", async ({ params, query }) => {
+	.get("/f76/camp/categories/:category_form_id", async ({ params, query, set }) => {
 		const categories = new F76CampCategories();
 
 		const categoryFormId = params.category_form_id;
@@ -374,7 +364,7 @@ const app = new Elysia()
 		if (!F76CAMP_VALID_SORT_ORDERS.includes(order) && order) order = F76CAMP_VALID_SORT_ORDERS[0];
 
 		if (!isHex(categoryFormId)) {
-			return {};
+			return notFound(set);
 		}
 
 		const result = await categories.getCategoryItems(
@@ -386,14 +376,10 @@ const app = new Elysia()
 			isPTS
 		);
 
-		if (!result) {
-			return {};
-		}
-
-		return result;
+		return result ?? notFound(set);
 	})
 
-	.get("/f76/camp/subcategories/:subcategory_form_id", async ({ params, query }) => {
+	.get("/f76/camp/subcategories/:subcategory_form_id", async ({ params, query, set }) => {
 		const categories = new F76CampCategories();
 
 		const subcategoryFormId = params.subcategory_form_id;
@@ -409,7 +395,7 @@ const app = new Elysia()
 		if (!F76CAMP_VALID_SORT_ORDERS.includes(order) && order) order = F76CAMP_VALID_SORT_ORDERS[0];
 
 		if (!isHex(subcategoryFormId)) {
-			return {};
+			return notFound(set);
 		}
 
 		const result = await categories.getSubcategoryItems(
@@ -421,14 +407,10 @@ const app = new Elysia()
 			isPTS
 		);
 
-		if (!result) {
-			return {};
-		}
-
-		return result;
+		return result ?? notFound(set);
 	})
 
-	.get('/f76/camp/items', async ({ query }) => {
+	.get('/f76/camp/items', async ({ query, set }) => {
 		const items = new F76CampItems();
 
 		const isPTS = query.is_pts === '1' || query.is_pts === 'true';
@@ -450,20 +432,17 @@ const app = new Elysia()
 			isPTS
 		);
 
-		if (!result) {
-			return {};
-		}
-
-		return result;
+		return result ?? notFound(set);
 	})
 
-	.get('/f76/camp/items/:item_form_id', async ({ params }) => {
+	.get('/f76/camp/items/:item_form_id', async ({ params, set }) => {
 		const items = new F76CampItems();
 
 		const itemId = params.item_form_id;
-		if (!isHex(itemId)) return {};
+		if (!isHex(itemId)) return notFound(set);
 
-		return await items.getItem(itemId);
+		const result = await items.getItem(itemId);
+		return result ?? notFound(set);
 	})
 
 	.get("/f76/camp/updated", async () => {

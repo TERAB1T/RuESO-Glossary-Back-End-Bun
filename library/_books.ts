@@ -72,7 +72,7 @@ export class Books {
 
 	async getBook(bookId: number) {
 		const book = this.#db.query(`SELECT * FROM ${TABLE_NAME_BOOKS} WHERE id = ?`).get(bookId);
-		if (!book) return {};
+		if (!book) return null;
 
 		const isSameVersion = book.created === book.updated;
 
