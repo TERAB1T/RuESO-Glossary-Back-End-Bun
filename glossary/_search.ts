@@ -1,4 +1,5 @@
-import { Database } from "bun:sqlite";
+import type { Database } from "bun:sqlite";
+import { getDb } from "../db";
 import {
 	COLUMNS, TABLE_NAME, DEFAULT_SERVER,
 	TES_VALID_GAMES, TES_DB_PATHS, TES_SERVER_GAMES,
@@ -66,52 +67,48 @@ export class GlossarySearch {
 	}
 
 	async searchTerm() {
-		const db = new Database(this.#dbPath, { readonly: true });
+		const db = getDb(this.#dbPath);
 
-		try {
-			const startTime = Date.now();
-			const { query, params } = this.#buildQuery();
+		const startTime = Date.now();
+		const { query, params } = this.#buildQuery();
 
-			let finalQuery = query;
-			if (this.#orderColumn !== null) {
-				finalQuery += ` ORDER BY ${this.#orderColumn} ${this.#orderDir}`;
-			}
-			finalQuery += " LIMIT ? OFFSET ?";
-			params.push(this.#length.toString(), this.#start.toString());
-
-			const results = db.query(finalQuery).all(params);
-			console.log(`Fetching data: ${(Date.now() - startTime) / 1000} seconds`);
-
-			// A short page means every match from #start on is already fetched, so the total is
-			// known without a COUNT, which would repeat the whole FTS lookup (costly for long phrases).
-			// An empty page past the first one may just be out of range, so it still needs a COUNT.
-			let total: number;
-			if (results.length < this.#length && (this.#start === 0 || results.length > 0)) {
-				total = this.#start + results.length;
-			} else {
-				const startCountTime = Date.now();
-				const { query: countQuery, params: countParams } = this.#buildQuery(true);
-				const totalRecords = db.query(countQuery).get(countParams) as { "COUNT(*)": number };
-				total = totalRecords ? totalRecords["COUNT(*)"] : 0;
-
-				console.log(`Fetching total records: ${(Date.now() - startCountTime) / 1000} seconds`);
-			}
-
-			return {
-				draw: this.#draw,
-				recordsTotal: total,
-				recordsFiltered: total,
-				data: results.map((res: any) => ({
-					game: res.game,
-					en: prepareHtml(res.en),
-					ru: prepareHtml(res.ru),
-					type: res.type,
-					tag: res.tag
-				})),
-			};
-		} finally {
-			db.close();
+		let finalQuery = query;
+		if (this.#orderColumn !== null) {
+			finalQuery += ` ORDER BY ${this.#orderColumn} ${this.#orderDir}`;
 		}
+		finalQuery += " LIMIT ? OFFSET ?";
+		params.push(this.#length.toString(), this.#start.toString());
+
+		const results = db.query(finalQuery).all(params);
+		console.log(`Fetching data: ${(Date.now() - startTime) / 1000} seconds`);
+
+		// A short page means every match from #start on is already fetched, so the total is
+		// known without a COUNT, which would repeat the whole FTS lookup (costly for long phrases).
+		// An empty page past the first one may just be out of range, so it still needs a COUNT.
+		let total: number;
+		if (results.length < this.#length && (this.#start === 0 || results.length > 0)) {
+			total = this.#start + results.length;
+		} else {
+			const startCountTime = Date.now();
+			const { query: countQuery, params: countParams } = this.#buildQuery(true);
+			const totalRecords = db.query(countQuery).get(countParams) as { "COUNT(*)": number };
+			total = totalRecords ? totalRecords["COUNT(*)"] : 0;
+
+			console.log(`Fetching total records: ${(Date.now() - startCountTime) / 1000} seconds`);
+		}
+
+		return {
+			draw: this.#draw,
+			recordsTotal: total,
+			recordsFiltered: total,
+			data: results.map((res: any) => ({
+				game: res.game,
+				en: prepareHtml(res.en),
+				ru: prepareHtml(res.ru),
+				type: res.type,
+				tag: res.tag
+			})),
+		};
 	}
 
 	#buildQuery(isCountQuery = false) {

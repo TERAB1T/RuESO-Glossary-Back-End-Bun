@@ -1,4 +1,5 @@
-import { Database } from "bun:sqlite";
+import type { Database } from "bun:sqlite";
+import { getDb } from "../db";
 import { getFileLastModifiedDate } from "../utils";
 import { TES_DB_PATHS, FALLOUT_DB_PATHS, type GlossaryServer } from "./constants";
 
@@ -23,17 +24,13 @@ export class GlossaryUpdated {
 	async #getServerInfo(dbPath: string): Promise<ServerInfo> {
 		if (!(await Bun.file(dbPath).exists())) return null;
 
-		const db = new Database(dbPath, { readonly: true });
+		const db = getDb(dbPath);
 
-		try {
-			const row = db.query("SELECT value FROM meta WHERE key = 'version'").get() as { value: string } | null;
+		const row = db.query("SELECT value FROM meta WHERE key = 'version'").get() as { value: string } | null;
 
-			return {
-				lastModified: await getFileLastModifiedDate(dbPath),
-				version: row?.value ?? null,
-			};
-		} finally {
-			db.close();
-		}
+		return {
+			lastModified: await getFileLastModifiedDate(dbPath),
+			version: row?.value ?? null,
+		};
 	}
 }

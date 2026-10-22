@@ -1,4 +1,5 @@
-import { Database } from "bun:sqlite";
+import type { Database } from "bun:sqlite";
+import { getDb } from "../db";
 import { DB_PATH, TABLE_NAME_BOOKS, TABLE_NAME_PATCHES, TABLE_NAME_CATEGORIES } from "./constants";
 import { escapeQuery } from "../utils";
 
@@ -6,125 +7,113 @@ export class Patches {
 	#db: Database;
 
 	constructor() {
-		this.#db = new Database(DB_PATH);
+		this.#db = getDb(DB_PATH);
 	}
 
 	async getPatches() {
-		try {
-			return this.#db.query(`SELECT version, nameEn, nameRu, date, slug FROM ${TABLE_NAME_PATCHES} ORDER BY id DESC`).all();
-		} finally {
-			this.#db.close();
-		}
+		return this.#db.query(`SELECT version, nameEn, nameRu, date, slug FROM ${TABLE_NAME_PATCHES} ORDER BY id DESC`).all();
 	}
 
 	async getPatch(patchVersion: string, page: number, pageSize: number, filter?: string) {
-		try {
-			const offset: number = (page - 1) * pageSize;
+		const offset: number = (page - 1) * pageSize;
 
-			const patch = this.#db.query(`SELECT * FROM ${TABLE_NAME_PATCHES} WHERE version = ?`).get(patchVersion);
+		const patch = this.#db.query(`SELECT * FROM ${TABLE_NAME_PATCHES} WHERE version = ?`).get(patchVersion);
 
-			if (!patch) return {};
+		if (!patch) return {};
 
-			let books: any[] = [];
-			let totalBooks: number = 0;
+		let books: any[] = [];
+		let totalBooks: number = 0;
 
-			if (filter && filter.length > 2) {
-				filter = escapeQuery(filter);
+		if (filter && filter.length > 2) {
+			filter = escapeQuery(filter);
 
-				books = this.#db.query(
-					`SELECT b.id, b.titleEn, b.titleRu, b.icon, b.slug, b.catId
+			books = this.#db.query(
+				`SELECT b.id, b.titleEn, b.titleRu, b.icon, b.slug, b.catId
                 FROM ${TABLE_NAME_BOOKS} b
                 JOIN books_fts ON books_fts.id = b.id
                 WHERE books_fts MATCH ? AND created = ?
                 ORDER BY orderCatId ASC
                 LIMIT ? OFFSET ?`
-				).all(filter, patchVersion, pageSize, offset);
+			).all(filter, patchVersion, pageSize, offset);
 
-				totalBooks = (this.#db.query(
-					`SELECT COUNT(*) AS count
+			totalBooks = (this.#db.query(
+				`SELECT COUNT(*) AS count
                 FROM books_fts
                 JOIN ${TABLE_NAME_BOOKS} b ON books_fts.id = b.id
                 WHERE books_fts MATCH ? AND created = ?`
-				).get(filter, patchVersion) as { count: number }).count;
+			).get(filter, patchVersion) as { count: number }).count;
 
-			} else {
-				books = this.#db.query(
-					`SELECT id, titleEn, titleRu, icon, slug, catId
-				FROM ${TABLE_NAME_BOOKS}
-				WHERE created = ?
-				ORDER BY orderCatId ASC
-				LIMIT ? OFFSET ?`
-				).all(patchVersion, pageSize, offset);
+		} else {
+			books = this.#db.query(
+				`SELECT id, titleEn, titleRu, icon, slug, catId
+			FROM ${TABLE_NAME_BOOKS}
+			WHERE created = ?
+			ORDER BY orderCatId ASC
+			LIMIT ? OFFSET ?`
+			).all(patchVersion, pageSize, offset);
 
-				totalBooks = (this.#db.query(
-					`SELECT COUNT(*) AS count
-				FROM ${TABLE_NAME_BOOKS}
-				WHERE created = ?`
-				).get(patchVersion) as { count: number }).count;
-			}
-
-			const catIds = [...new Set(books.map(book => book.catId))];
-			let categories: any[] = [];
-
-			if (catIds.length !== 0) {
-				const catPlaceholders = catIds.map(() => "?").join(",");
-				categories = this.#db.query(
-					`SELECT id, titleRu
-				FROM ${TABLE_NAME_CATEGORIES}
-				WHERE id IN (${catPlaceholders})
-				ORDER BY orderId ASC`
-				).all(...catIds);
-			}
-
-			return {
-				...patch,
-				books,
-				categories,
-				pagination: {
-					page,
-					page_size: pageSize,
-					total_books: totalBooks,
-					total_pages: Math.ceil(totalBooks / pageSize)
-				}
-			};
-		} finally {
-			this.#db.close();
+			totalBooks = (this.#db.query(
+				`SELECT COUNT(*) AS count
+			FROM ${TABLE_NAME_BOOKS}
+			WHERE created = ?`
+			).get(patchVersion) as { count: number }).count;
 		}
+
+		const catIds = [...new Set(books.map(book => book.catId))];
+		let categories: any[] = [];
+
+		if (catIds.length !== 0) {
+			const catPlaceholders = catIds.map(() => "?").join(",");
+			categories = this.#db.query(
+				`SELECT id, titleRu
+			FROM ${TABLE_NAME_CATEGORIES}
+			WHERE id IN (${catPlaceholders})
+			ORDER BY orderId ASC`
+			).all(...catIds);
+		}
+
+		return {
+			...patch,
+			books,
+			categories,
+			pagination: {
+				page,
+				page_size: pageSize,
+				total_books: totalBooks,
+				total_pages: Math.ceil(totalBooks / pageSize)
+			}
+		};
 	}
 
 	async getPatchBooksExport(patchVersion: string) {
-		try {
-			const patch = this.#db.query(`SELECT * FROM ${TABLE_NAME_PATCHES} WHERE version = ?`).get(patchVersion);
+		const patch = this.#db.query(`SELECT * FROM ${TABLE_NAME_PATCHES} WHERE version = ?`).get(patchVersion);
 
-			if (!patch) return {};
+		if (!patch) return {};
 
-			const books = this.#db.query(
-				`SELECT id, titleEn, titleRu, icon, slug, catId
-				FROM ${TABLE_NAME_BOOKS}
-				WHERE created = ?
-				ORDER BY orderCatId ASC`
-			).all(patchVersion);
+		const books = this.#db.query(
+			`SELECT id, titleEn, titleRu, icon, slug, catId
+			FROM ${TABLE_NAME_BOOKS}
+			WHERE created = ?
+			ORDER BY orderCatId ASC`
+		).all(patchVersion);
 
-			const catIds = [...new Set(books.map(book => book.catId))];
-			let categories: any[] = [];
+		const catIds = [...new Set(books.map(book => book.catId))];
+		let categories: any[] = [];
 
-			if (catIds.length !== 0) {
-				const catPlaceholders = catIds.map(() => "?").join(",");
-				categories = this.#db.query(
-					`SELECT id, titleRu
-					FROM ${TABLE_NAME_CATEGORIES}
-					WHERE id IN (${catPlaceholders})
-					ORDER BY orderId ASC`
-				).all(...catIds);
-			}
-
-			return {
-				...patch,
-				books,
-				categories
-			};
-		} finally {
-			this.#db.close();
+		if (catIds.length !== 0) {
+			const catPlaceholders = catIds.map(() => "?").join(",");
+			categories = this.#db.query(
+				`SELECT id, titleRu
+				FROM ${TABLE_NAME_CATEGORIES}
+				WHERE id IN (${catPlaceholders})
+				ORDER BY orderId ASC`
+			).all(...catIds);
 		}
+
+		return {
+			...patch,
+			books,
+			categories
+		};
 	}
 }

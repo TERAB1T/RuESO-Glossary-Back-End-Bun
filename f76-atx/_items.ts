@@ -1,4 +1,5 @@
-import { Database } from "bun:sqlite";
+import type { Database } from "bun:sqlite";
+import { getDb } from "../db";
 import { DB_PATH, TABLE_NAME_ITEMS, TABLE_NAME_CATEGORIES, TABLE_NAME_SUBCATEGORIES, TABLE_NAME_ACQUISITION_SOURCES } from "./constants";
 import {
 	DB_PATH as CAMP_DB_PATH,
@@ -36,10 +37,9 @@ interface CampUnlockedItemRow {
 
 export class Items {
 	#db: Database;
-	#campAttached = false;
 
 	constructor() {
-		this.#db = new Database(DB_PATH);
+		this.#db = getDb(DB_PATH);
 	}
 
 	async getItems(
@@ -50,115 +50,101 @@ export class Items {
 		isPTS?: boolean,
 		hasSupport?: boolean
 	): Promise<ItemsResponse | null> {
-		try {
-			const offset = (page - 1) * pageSize;
+		const offset = (page - 1) * pageSize;
 
-			const conditions: string[] = [];
-			const params: any[] = [];
+		const conditions: string[] = [];
+		const params: any[] = [];
 
-			const useFilter = filter && filter.length > 2;
-			const baseTable = useFilter ? 'items_fts' : TABLE_NAME_ITEMS;
+		const useFilter = filter && filter.length > 2;
+		const baseTable = useFilter ? 'items_fts' : TABLE_NAME_ITEMS;
 
-			if (useFilter) {
-				const escapedFilter = escapeQuery(filter);
-				conditions.push(`${baseTable} MATCH ?`);
-				params.push(escapedFilter);
-			}
-
-			if (isPTS === true) {
-				conditions.push('i.isPTS = 1');
-			}
-
-			if (hasSupport === true) {
-				conditions.push('(i.supportItem IS NOT NULL OR i.supportBundles IS NOT NULL)');
-			}
-
-			const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-			const orderClause = getF76AtxOrderClause(order);
-
-			// Main query
-			const fromClause = useFilter
-				? `FROM ${TABLE_NAME_ITEMS} i JOIN items_fts ON items_fts.formId = i.formId`
-				: `FROM ${TABLE_NAME_ITEMS} i`;
-
-			const items = this.#db.query<Item, any[]>(
-				`SELECT i.formId, i.nameEn, i.nameRu, i.mainImage, i.categoryFormId, i.subcategoryFormId, i.slug, i.isPTS, i.supportItem, i.supportBundles
-			${fromClause}
-			${whereClause}
-			${orderClause}
-			LIMIT ? OFFSET ?`
-			).all(...params, pageSize, offset);
-
-			// Count total items
-			const countFromClause = useFilter
-				? `FROM items_fts JOIN ${TABLE_NAME_ITEMS} i ON items_fts.formId = i.formId`
-				: `FROM ${TABLE_NAME_ITEMS} i`;
-
-			const totalItems = (this.#db.query<{ count: number }, any[]>(
-				`SELECT COUNT(*) AS count
-			${countFromClause}
-			${whereClause}`
-			).get(...params) as { count: number }).count;
-
-			return {
-				items,
-				pagination: {
-					page,
-					page_size: pageSize,
-					total_items: totalItems,
-					total_pages: Math.ceil(totalItems / pageSize)
-				}
-			};
-		} finally {
-			this.#db.close();
+		if (useFilter) {
+			const escapedFilter = escapeQuery(filter);
+			conditions.push(`${baseTable} MATCH ?`);
+			params.push(escapedFilter);
 		}
+
+		if (isPTS === true) {
+			conditions.push('i.isPTS = 1');
+		}
+
+		if (hasSupport === true) {
+			conditions.push('(i.supportItem IS NOT NULL OR i.supportBundles IS NOT NULL)');
+		}
+
+		const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+		const orderClause = getF76AtxOrderClause(order);
+
+		// Main query
+		const fromClause = useFilter
+			? `FROM ${TABLE_NAME_ITEMS} i JOIN items_fts ON items_fts.formId = i.formId`
+			: `FROM ${TABLE_NAME_ITEMS} i`;
+
+		const items = this.#db.query<Item, any[]>(
+			`SELECT i.formId, i.nameEn, i.nameRu, i.mainImage, i.categoryFormId, i.subcategoryFormId, i.slug, i.isPTS, i.supportItem, i.supportBundles
+		${fromClause}
+		${whereClause}
+		${orderClause}
+		LIMIT ? OFFSET ?`
+		).all(...params, pageSize, offset);
+
+		// Count total items
+		const countFromClause = useFilter
+			? `FROM items_fts JOIN ${TABLE_NAME_ITEMS} i ON items_fts.formId = i.formId`
+			: `FROM ${TABLE_NAME_ITEMS} i`;
+
+		const totalItems = (this.#db.query<{ count: number }, any[]>(
+			`SELECT COUNT(*) AS count
+		${countFromClause}
+		${whereClause}`
+		).get(...params) as { count: number }).count;
+
+		return {
+			items,
+			pagination: {
+				page,
+				page_size: pageSize,
+				total_items: totalItems,
+				total_pages: Math.ceil(totalItems / pageSize)
+			}
+		};
 	}
 
 	async getItem(itemFormId: string): Promise<ItemWithRelations | null> {
-		try {
-			const item = this.#db.query<Item, [string]>(
-				`SELECT * FROM ${TABLE_NAME_ITEMS} WHERE formId = ?`
-			).get(itemFormId);
+		const item = this.#db.query<Item, [string]>(
+			`SELECT * FROM ${TABLE_NAME_ITEMS} WHERE formId = ?`
+		).get(itemFormId);
 
-			if (!item) return null;
+		if (!item) return null;
 
-			if (item.screenshots && typeof item.screenshots === 'string')
-				item.screenshots = item.screenshots.split(';');
+		if (item.screenshots && typeof item.screenshots === 'string')
+			item.screenshots = item.screenshots.split(';');
 
-			const category = item.categoryFormId
-				? this.#db.query<Pick<Category, 'formId' | 'nameEn' | 'nameRu' | 'slug'>, [string]>(
-					`SELECT formId, nameEn, nameRu, slug FROM ${TABLE_NAME_CATEGORIES} WHERE formId = ?`
-				).get(item.categoryFormId)
-				: null;
+		const category = item.categoryFormId
+			? this.#db.query<Pick<Category, 'formId' | 'nameEn' | 'nameRu' | 'slug'>, [string]>(
+				`SELECT formId, nameEn, nameRu, slug FROM ${TABLE_NAME_CATEGORIES} WHERE formId = ?`
+			).get(item.categoryFormId)
+			: null;
 
-			const subcategory = item.subcategoryFormId
-				? this.#db.query<Pick<Subcategory, 'formId' | 'nameEn' | 'nameRu' | 'slug'>, [string]>(
-					`SELECT formId, nameEn, nameRu, slug FROM ${TABLE_NAME_SUBCATEGORIES} WHERE formId = ?`
-				).get(item.subcategoryFormId)
-				: null;
+		const subcategory = item.subcategoryFormId
+			? this.#db.query<Pick<Subcategory, 'formId' | 'nameEn' | 'nameRu' | 'slug'>, [string]>(
+				`SELECT formId, nameEn, nameRu, slug FROM ${TABLE_NAME_SUBCATEGORIES} WHERE formId = ?`
+			).get(item.subcategoryFormId)
+			: null;
 
-			const acquisitionSource = item.acquisitionSourceNumber != null
-				? this.#db.query<Pick<AcquisitionSource, 'type' | 'number' | 'nameRu' | 'slug'>, [string, number]>(
-					`SELECT type, number, nameRu, slug FROM ${TABLE_NAME_ACQUISITION_SOURCES} WHERE type = ? AND number = ?`
-				).get(item.acquisitionSourceType, item.acquisitionSourceNumber)
-				: null;
+		const acquisitionSource = item.acquisitionSourceNumber != null
+			? this.#db.query<Pick<AcquisitionSource, 'type' | 'number' | 'nameRu' | 'slug'>, [string, number]>(
+				`SELECT type, number, nameRu, slug FROM ${TABLE_NAME_ACQUISITION_SOURCES} WHERE type = ? AND number = ?`
+			).get(item.acquisitionSourceType, item.acquisitionSourceNumber)
+			: null;
 
-			return {
-				...item,
-				category: category || null,
-				subcategory: subcategory || null,
-				acquisitionSource: acquisitionSource || null,
-				campUnlockedItems: this.#resolveCampUnlockedItems(item.campUnlockedItems)
-			};
-		} finally {
-			this.#db.close();
-		}
-	}
-
-	#ensureCampAttached() {
-		if (this.#campAttached) return;
-		this.#db.query(`ATTACH DATABASE ? AS campdb`).run(CAMP_DB_PATH);
-		this.#campAttached = true;
+		return {
+			...item,
+			category: category || null,
+			subcategory: subcategory || null,
+			acquisitionSource: acquisitionSource || null,
+			campUnlockedItems: this.#resolveCampUnlockedItems(item.campUnlockedItems)
+		};
 	}
 
 	#resolveCampUnlockedItems(raw: string | null): CampUnlockedItem[] | null {
@@ -167,11 +153,10 @@ export class Items {
 		const formIds = raw.split('|').filter(Boolean);
 		if (formIds.length === 0) return null;
 
-		this.#ensureCampAttached();
-
 		const placeholders = formIds.map(() => '?').join(',');
 
-		const rows = this.#db.query<CampUnlockedItemRow, string[]>(
+		// Every table here is in the C.A.M.P. DB; only the formIds come from this item.
+		const rows = getDb(CAMP_DB_PATH).query<CampUnlockedItemRow, string[]>(
 			`SELECT
 				ci.formId AS formId,
 				ci.nameEn AS nameEn,
@@ -186,9 +171,9 @@ export class Items {
 				cs.nameEn AS subcategoryNameEn,
 				cs.nameRu AS subcategoryNameRu,
 				cs.slug AS subcategorySlug
-			FROM campdb.${CAMP_TABLE_NAME_ITEMS} ci
-			LEFT JOIN campdb.${CAMP_TABLE_NAME_CATEGORIES} cc ON cc.formId = ci.categoryFormId
-			LEFT JOIN campdb.${CAMP_TABLE_NAME_SUBCATEGORIES} cs ON cs.formId = ci.subcategoryFormId
+			FROM ${CAMP_TABLE_NAME_ITEMS} ci
+			LEFT JOIN ${CAMP_TABLE_NAME_CATEGORIES} cc ON cc.formId = ci.categoryFormId
+			LEFT JOIN ${CAMP_TABLE_NAME_SUBCATEGORIES} cs ON cs.formId = ci.subcategoryFormId
 			WHERE ci.formId IN (${placeholders})
 			ORDER BY ci.orderInGame`
 		).all(...formIds);
