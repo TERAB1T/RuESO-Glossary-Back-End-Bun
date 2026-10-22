@@ -39,6 +39,37 @@ export function parseIds(ids: unknown): number[] {
 	return [];
 }
 
+// Far above any real page; keeps (page - 1) * pageSize a safe integer for SQLite's OFFSET.
+const MAX_PAGE = 100_000;
+
+export interface ListQuery {
+	page: number;
+	pageSize: number;
+	filter: string;
+	order: string;
+	isPTS: boolean;
+	hasSupport: boolean;
+}
+
+/** Reads the paging, filter and sorting params shared by the list endpoints. */
+export function parseListQuery(
+	query: Record<string, string | undefined>,
+	defaultPageSize: number,
+	maxPageSize: number,
+	validSortOrders: string[] = []
+): ListQuery {
+	const isTrue = (value?: string) => value === "1" || value === "true";
+
+	return {
+		page: isInteger(query.page) ? Math.min(parseInt(query.page!), MAX_PAGE) : 1,
+		pageSize: isInteger(query.page_size) ? Math.min(parseInt(query.page_size!), maxPageSize) : defaultPageSize,
+		filter: query.filter ?? "",
+		order: validSortOrders.includes(query.sort_order ?? "") ? query.sort_order! : validSortOrders[0] ?? "",
+		isPTS: isTrue(query.is_pts),
+		hasSupport: isTrue(query.has_support),
+	};
+}
+
 export async function getFileLastModifiedDate(path: string): Promise<string> {
 	const timestamp = await Bun.file(path).lastModified;
 
@@ -47,34 +78,4 @@ export async function getFileLastModifiedDate(path: string): Promise<string> {
 		month: "2-digit",
 		year: "numeric"
 	}).format(timestamp);
-}
-
-export function getF76AtxOrderClause(order: string): string {
-	switch (order) {
-		case "date_desc":
-			return "ORDER BY orderByFormId DESC";
-		case "date_asc":
-			return "ORDER BY orderByFormId ASC";
-		case "name_desc":
-			return "ORDER BY orderByName DESC";
-		case "name_asc":
-			return "ORDER BY orderByName ASC";
-		default:
-			return "ORDER BY orderByFormId DESC";
-	}
-}
-
-export function getF76CampOrderClause(order: string): string {
-	switch (order) {
-		case "date_desc":
-			return "ORDER BY orderByFormId DESC";
-		case "date_asc":
-			return "ORDER BY orderByFormId ASC";
-		case "name_desc":
-			return "ORDER BY orderByName DESC";
-		case "name_asc":
-			return "ORDER BY orderByName ASC";
-		default:
-			return "ORDER BY orderByFormId DESC";
-	}
 }

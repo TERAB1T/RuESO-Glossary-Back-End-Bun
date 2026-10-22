@@ -1,6 +1,6 @@
 import { Elysia } from "elysia";
 import { cors } from '@elysiajs/cors';
-import { isInteger, isHex, parseIds, getFileLastModifiedDate } from "./utils";
+import { isInteger, isHex, parseIds, parseListQuery, getFileLastModifiedDate } from "./utils";
 
 import { GlossarySearch } from "./glossary/_search";
 import { GlossaryUpdated } from "./glossary/_updated";
@@ -31,6 +31,13 @@ const notFound = (set: { status?: number | string }) => {
 	return { error: "Not Found" };
 };
 
+const libraryListQuery = (query: Record<string, string | undefined>) =>
+	parseListQuery(query, LIBRARY_PAGE_SIZE, MAX_PAGE_SIZE);
+const atxListQuery = (query: Record<string, string | undefined>) =>
+	parseListQuery(query, ATX_PAGE_SIZE, MAX_PAGE_SIZE, F76ATX_VALID_SORT_ORDERS);
+const campListQuery = (query: Record<string, string | undefined>) =>
+	parseListQuery(query, ATX_PAGE_SIZE, MAX_PAGE_SIZE, F76CAMP_VALID_SORT_ORDERS);
+
 const app = new Elysia()
 	.onError(({ error, set }) => {
 		console.error(error);
@@ -58,82 +65,46 @@ const app = new Elysia()
 	})
 
 	.get("/library/categories", async () => {
-		const categories = new LibraryCategories();
-		return await categories.getCategories();
+		return await new LibraryCategories().getCategories();
 	})
 
 	.get("/library/categories/:category_id", async ({ params, query, set }) => {
-		const categories = new LibraryCategories();
+		if (!isInteger(params.category_id)) return notFound(set);
 
-		const categoryId = params.category_id;
-		let page: any = query.page;
-		let pageSize: any = query.page_size;
-		let filter: any = query.filter;
-
-		if (!isInteger(page)) page = 1;
-		if (!isInteger(pageSize)) pageSize = LIBRARY_PAGE_SIZE;
-		else if (parseInt(pageSize) > MAX_PAGE_SIZE) pageSize = MAX_PAGE_SIZE;
-
-		if (!isInteger(categoryId)) return notFound(set);
-
-		const result = await categories.getCategory(parseInt(categoryId), parseInt(page), parseInt(pageSize), filter);
+		const { page, pageSize, filter } = libraryListQuery(query);
+		const result = await new LibraryCategories().getCategory(parseInt(params.category_id), page, pageSize, filter);
 		return result ?? notFound(set);
 	})
 
 	.get("/library/patches", async () => {
-		const patches = new LibraryPatches();
-		return await patches.getPatches();
+		return await new LibraryPatches().getPatches();
 	})
 
 	.get("/library/patches/:patch_version", async ({ params, query, set }) => {
-		const patches = new LibraryPatches();
-
-		const patchVersion = params.patch_version;
-		let page: any = query.page;
-		let pageSize: any = query.page_size;
-		let filter: any = query.filter;
-
-		if (!isInteger(page)) page = 1;
-		if (!isInteger(pageSize)) pageSize = LIBRARY_PAGE_SIZE;
-		else if (parseInt(pageSize) > MAX_PAGE_SIZE) pageSize = MAX_PAGE_SIZE;
-
-		const result = await patches.getPatch(patchVersion, parseInt(page), parseInt(pageSize), filter);
+		const { page, pageSize, filter } = libraryListQuery(query);
+		const result = await new LibraryPatches().getPatch(params.patch_version, page, pageSize, filter);
 		return result ?? notFound(set);
 	})
 
 	.get("/library/patches/:patch_version/export", async ({ params, set }) => {
-		const patches = new LibraryPatches();
-
-		const patchVersion = params.patch_version;
-
-		const result = await patches.getPatchBooksExport(patchVersion);
+		const result = await new LibraryPatches().getPatchBooksExport(params.patch_version);
 		return result ?? notFound(set);
 	})
 
 	.get('/library/books', async ({ query }) => {
 		const books = new Books();
 
-		let page: any = query.page;
-		let pageSize: any = query.page_size;
 		const ids: number[] = parseIds(query.ids);
-		let filter: any = query.filter;
-
-		if (!isInteger(page)) page = 1;
-		if (!isInteger(pageSize)) pageSize = LIBRARY_PAGE_SIZE;
-		else if (parseInt(pageSize) > MAX_PAGE_SIZE) pageSize = MAX_PAGE_SIZE;
-
 		if (ids.length) return await books.getBooksWithIds(ids);
 
-		return await books.getBooks(parseInt(page), parseInt(pageSize), filter);
+		const { page, pageSize, filter } = libraryListQuery(query);
+		return await books.getBooks(page, pageSize, filter);
 	})
 
 	.get('/library/books/:book_id', async ({ params, set }) => {
-		const books = new Books();
+		if (!isInteger(params.book_id)) return notFound(set);
 
-		const bookId = params.book_id;
-		if (!isInteger(bookId)) return notFound(set);
-
-		const result = await books.getBook(parseInt(bookId));
+		const result = await new Books().getBook(parseInt(params.book_id));
 		return result ?? notFound(set);
 	})
 
@@ -143,195 +114,64 @@ const app = new Elysia()
 	})
 
 	.get("/glossary/tes/updated", async () => {
-		const glossaryUpdated = new GlossaryUpdated("tes");
-		return await glossaryUpdated.getUpdated();
+		return await new GlossaryUpdated("tes").getUpdated();
 	})
 
 	.get("/glossary/fallout/updated", async () => {
-		const glossaryUpdated = new GlossaryUpdated("fallout");
-		return await glossaryUpdated.getUpdated();
+		return await new GlossaryUpdated("fallout").getUpdated();
 	})
 
 	// F76 Atomic Shop
 
 	.get("/f76/atomicshop/categories", async () => {
-		const categories = new F76AtxCategories();
-		return await categories.getCategories();
+		return await new F76AtxCategories().getCategories();
 	})
 
 	.get("/f76/atomicshop/categories/:category_form_id", async ({ params, query, set }) => {
-		const categories = new F76AtxCategories();
+		if (!isHex(params.category_form_id)) return notFound(set);
 
-		const categoryFormId = params.category_form_id;
-		const isPTS = query.is_pts === '1' || query.is_pts === 'true';
-		const hasSupport = query.has_support === '1' || query.has_support === 'true';
-		let page: any = query.page;
-		let pageSize: any = query.page_size;
-		let filter: any = query.filter;
-		let order: any = query.sort_order;
-
-		if (!isInteger(page)) page = 1;
-		if (!isInteger(pageSize)) pageSize = ATX_PAGE_SIZE;
-		else if (parseInt(pageSize) > MAX_PAGE_SIZE) pageSize = MAX_PAGE_SIZE;
-		if (!F76ATX_VALID_SORT_ORDERS.includes(order) && order) order = F76ATX_VALID_SORT_ORDERS[0];
-
-		if (!isHex(categoryFormId)) {
-			return notFound(set);
-		}
-
-		const result = await categories.getCategoryItems(
-			categoryFormId,
-			parseInt(page),
-			parseInt(pageSize),
-			filter,
-			order,
-			isPTS,
-			hasSupport
-		);
-
+		const { page, pageSize, filter, order, isPTS, hasSupport } = atxListQuery(query);
+		const result = await new F76AtxCategories().getCategoryItems(params.category_form_id, page, pageSize, filter, order, isPTS, hasSupport);
 		return result ?? notFound(set);
 	})
 
 	.get("/f76/atomicshop/subcategories/:subcategory_form_id", async ({ params, query, set }) => {
-		const categories = new F76AtxCategories();
+		if (!isHex(params.subcategory_form_id)) return notFound(set);
 
-		const subcategoryFormId = params.subcategory_form_id;
-		const isPTS = query.is_pts === '1' || query.is_pts === 'true';
-		const hasSupport = query.has_support === '1' || query.has_support === 'true';
-		let page: any = query.page;
-		let pageSize: any = query.page_size;
-		let filter: any = query.filter;
-		let order: any = query.sort_order;
-
-		if (!isInteger(page)) page = 1;
-		if (!isInteger(pageSize)) pageSize = ATX_PAGE_SIZE;
-		else if (parseInt(pageSize) > MAX_PAGE_SIZE) pageSize = MAX_PAGE_SIZE;
-		if (!F76ATX_VALID_SORT_ORDERS.includes(order) && order) order = F76ATX_VALID_SORT_ORDERS[0];
-
-		if (!isHex(subcategoryFormId)) {
-			return notFound(set);
-		}
-
-		const result = await categories.getSubcategoryItems(
-			subcategoryFormId,
-			parseInt(page),
-			parseInt(pageSize),
-			filter,
-			order,
-			isPTS,
-			hasSupport
-		);
-
+		const { page, pageSize, filter, order, isPTS, hasSupport } = atxListQuery(query);
+		const result = await new F76AtxCategories().getSubcategoryItems(params.subcategory_form_id, page, pageSize, filter, order, isPTS, hasSupport);
 		return result ?? notFound(set);
 	})
 
 	.get("/f76/atomicshop/acquisition", async () => {
-		const acquisitionSources = new F76AtxAcquisitionSources();
-		return await acquisitionSources.getAcquisitionSources();
+		return await new F76AtxAcquisitionSources().getAcquisitionSources();
 	})
 
 	.get("/f76/atomicshop/acquisition/:type", async ({ params, query, set }) => {
-		const acquisitionSources = new F76AtxAcquisitionSources();
+		if (!F76ATX_VALID_ACQUISITION_TYPES.includes(params.type)) return notFound(set);
 
-		const type = params.type;
-		const isPTS = query.is_pts === '1' || query.is_pts === 'true';
-		const hasSupport = query.has_support === '1' || query.has_support === 'true';
-		let page: any = query.page;
-		let pageSize: any = query.page_size;
-		let filter: any = query.filter;
-		let order: any = query.sort_order;
-
-		if (!isInteger(page)) page = 1;
-		if (!isInteger(pageSize)) pageSize = ATX_PAGE_SIZE;
-		else if (parseInt(pageSize) > MAX_PAGE_SIZE) pageSize = MAX_PAGE_SIZE;
-		if (!F76ATX_VALID_SORT_ORDERS.includes(order) && order) order = F76ATX_VALID_SORT_ORDERS[0];
-
-		if (!F76ATX_VALID_ACQUISITION_TYPES.includes(type)) {
-			return notFound(set);
-		}
-
-		const result = await acquisitionSources.getTypeItems(
-			type,
-			parseInt(page),
-			parseInt(pageSize),
-			filter,
-			order,
-			isPTS,
-			hasSupport
-		);
-
+		const { page, pageSize, filter, order, isPTS, hasSupport } = atxListQuery(query);
+		const result = await new F76AtxAcquisitionSources().getTypeItems(params.type, page, pageSize, filter, order, isPTS, hasSupport);
 		return result ?? notFound(set);
 	})
 
 	.get("/f76/atomicshop/acquisition/:type/:number", async ({ params, query, set }) => {
-		const acquisitionSources = new F76AtxAcquisitionSources();
+		if (!F76ATX_VALID_ACQUISITION_TYPES.includes(params.type) || !isInteger(params.number)) return notFound(set);
 
-		const type = params.type;
-		const number = params.number;
-		const isPTS = query.is_pts === '1' || query.is_pts === 'true';
-		const hasSupport = query.has_support === '1' || query.has_support === 'true';
-		let page: any = query.page;
-		let pageSize: any = query.page_size;
-		let filter: any = query.filter;
-		let order: any = query.sort_order;
-
-		if (!isInteger(page)) page = 1;
-		if (!isInteger(pageSize)) pageSize = ATX_PAGE_SIZE;
-		else if (parseInt(pageSize) > MAX_PAGE_SIZE) pageSize = MAX_PAGE_SIZE;
-		if (!F76ATX_VALID_SORT_ORDERS.includes(order) && order) order = F76ATX_VALID_SORT_ORDERS[0];
-
-		if (!F76ATX_VALID_ACQUISITION_TYPES.includes(type) || !isInteger(number)) {
-			return notFound(set);
-		}
-
-		const result = await acquisitionSources.getSourceItems(
-			type,
-			parseInt(number),
-			parseInt(page),
-			parseInt(pageSize),
-			filter,
-			order,
-			isPTS,
-			hasSupport
-		);
-
+		const { page, pageSize, filter, order, isPTS, hasSupport } = atxListQuery(query);
+		const result = await new F76AtxAcquisitionSources().getSourceItems(params.type, parseInt(params.number), page, pageSize, filter, order, isPTS, hasSupport);
 		return result ?? notFound(set);
 	})
 
-	.get('/f76/atomicshop/items', async ({ query, set }) => {
-		const items = new F76AtxItems();
-
-		const isPTS = query.is_pts === '1' || query.is_pts === 'true';
-		const hasSupport = query.has_support === '1' || query.has_support === 'true';
-		let page: any = query.page;
-		let pageSize: any = query.page_size;
-		let filter: any = query.filter;
-		let order: any = query.sort_order;
-
-		if (!isInteger(page)) page = 1;
-		if (!isInteger(pageSize)) pageSize = ATX_PAGE_SIZE;
-		else if (parseInt(pageSize) > MAX_PAGE_SIZE) pageSize = MAX_PAGE_SIZE;
-		if (!F76ATX_VALID_SORT_ORDERS.includes(order) && order) order = F76ATX_VALID_SORT_ORDERS[0];
-
-		const result = await items.getItems(
-			parseInt(page),
-			parseInt(pageSize),
-			filter,
-			order,
-			isPTS,
-			hasSupport
-		);
-
-		return result ?? notFound(set);
+	.get('/f76/atomicshop/items', async ({ query }) => {
+		const { page, pageSize, filter, order, isPTS, hasSupport } = atxListQuery(query);
+		return await new F76AtxItems().getItems(page, pageSize, filter, order, isPTS, hasSupport);
 	})
 
 	.get('/f76/atomicshop/items/:item_form_id', async ({ params, set }) => {
-		const items = new F76AtxItems();
+		if (!isHex(params.item_form_id)) return notFound(set);
 
-		const itemId = params.item_form_id;
-		if (!isHex(itemId)) return notFound(set);
-
-		const result = await items.getItem(itemId);
+		const result = await new F76AtxItems().getItem(params.item_form_id);
 		return result ?? notFound(set);
 	})
 
@@ -340,108 +180,37 @@ const app = new Elysia()
 		return { lastModified };
 	})
 
-
 	// F76 C.A.M.P.
 
 	.get("/f76/camp/categories", async () => {
-		const categories = new F76CampCategories();
-		return await categories.getCategories();
+		return await new F76CampCategories().getCategories();
 	})
 
 	.get("/f76/camp/categories/:category_form_id", async ({ params, query, set }) => {
-		const categories = new F76CampCategories();
+		if (!isHex(params.category_form_id)) return notFound(set);
 
-		const categoryFormId = params.category_form_id;
-		const isPTS = query.is_pts === '1' || query.is_pts === 'true';
-		let page: any = query.page;
-		let pageSize: any = query.page_size;
-		let filter: any = query.filter;
-		let order: any = query.sort_order;
-
-		if (!isInteger(page)) page = 1;
-		if (!isInteger(pageSize)) pageSize = ATX_PAGE_SIZE;
-		else if (parseInt(pageSize) > MAX_PAGE_SIZE) pageSize = MAX_PAGE_SIZE;
-		if (!F76CAMP_VALID_SORT_ORDERS.includes(order) && order) order = F76CAMP_VALID_SORT_ORDERS[0];
-
-		if (!isHex(categoryFormId)) {
-			return notFound(set);
-		}
-
-		const result = await categories.getCategoryItems(
-			categoryFormId,
-			parseInt(page),
-			parseInt(pageSize),
-			filter,
-			order,
-			isPTS
-		);
-
+		const { page, pageSize, filter, order, isPTS } = campListQuery(query);
+		const result = await new F76CampCategories().getCategoryItems(params.category_form_id, page, pageSize, filter, order, isPTS);
 		return result ?? notFound(set);
 	})
 
 	.get("/f76/camp/subcategories/:subcategory_form_id", async ({ params, query, set }) => {
-		const categories = new F76CampCategories();
+		if (!isHex(params.subcategory_form_id)) return notFound(set);
 
-		const subcategoryFormId = params.subcategory_form_id;
-		const isPTS = query.is_pts === '1' || query.is_pts === 'true';
-		let page: any = query.page;
-		let pageSize: any = query.page_size;
-		let filter: any = query.filter;
-		let order: any = query.sort_order;
-
-		if (!isInteger(page)) page = 1;
-		if (!isInteger(pageSize)) pageSize = ATX_PAGE_SIZE;
-		else if (parseInt(pageSize) > MAX_PAGE_SIZE) pageSize = MAX_PAGE_SIZE;
-		if (!F76CAMP_VALID_SORT_ORDERS.includes(order) && order) order = F76CAMP_VALID_SORT_ORDERS[0];
-
-		if (!isHex(subcategoryFormId)) {
-			return notFound(set);
-		}
-
-		const result = await categories.getSubcategoryItems(
-			subcategoryFormId,
-			parseInt(page),
-			parseInt(pageSize),
-			filter,
-			order,
-			isPTS
-		);
-
+		const { page, pageSize, filter, order, isPTS } = campListQuery(query);
+		const result = await new F76CampCategories().getSubcategoryItems(params.subcategory_form_id, page, pageSize, filter, order, isPTS);
 		return result ?? notFound(set);
 	})
 
-	.get('/f76/camp/items', async ({ query, set }) => {
-		const items = new F76CampItems();
-
-		const isPTS = query.is_pts === '1' || query.is_pts === 'true';
-		let page: any = query.page;
-		let pageSize: any = query.page_size;
-		let filter: any = query.filter;
-		let order: any = query.sort_order;
-
-		if (!isInteger(page)) page = 1;
-		if (!isInteger(pageSize)) pageSize = ATX_PAGE_SIZE;
-		else if (parseInt(pageSize) > MAX_PAGE_SIZE) pageSize = MAX_PAGE_SIZE;
-		if (!F76CAMP_VALID_SORT_ORDERS.includes(order) && order) order = F76CAMP_VALID_SORT_ORDERS[0];
-
-		const result = await items.getItems(
-			parseInt(page),
-			parseInt(pageSize),
-			filter,
-			order,
-			isPTS
-		);
-
-		return result ?? notFound(set);
+	.get('/f76/camp/items', async ({ query }) => {
+		const { page, pageSize, filter, order, isPTS } = campListQuery(query);
+		return await new F76CampItems().getItems(page, pageSize, filter, order, isPTS);
 	})
 
 	.get('/f76/camp/items/:item_form_id', async ({ params, set }) => {
-		const items = new F76CampItems();
+		if (!isHex(params.item_form_id)) return notFound(set);
 
-		const itemId = params.item_form_id;
-		if (!isHex(itemId)) return notFound(set);
-
-		const result = await items.getItem(itemId);
+		const result = await new F76CampItems().getItem(params.item_form_id);
 		return result ?? notFound(set);
 	})
 

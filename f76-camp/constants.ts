@@ -6,3 +6,5 @@ export const TABLE_NAME_SUBCATEGORIES = 'subcategories';
 export const TABLE_NAME_RECIPES = 'recipes';
 
 export const VALID_SORT_ORDERS = ['date_desc', 'date_asc', 'name_desc', 'name_asc'];
+
+export const LIST_COLUMNS = 'i.formId, i.nameEn, i.nameRu, i.mainImage, i.categoryFormId, i.subcategoryFormId, i.slug, i.isPTS';

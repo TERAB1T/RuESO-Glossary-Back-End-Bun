@@ -8,3 +8,5 @@ export const TABLE_NAME_ACQUISITION_SOURCES = 'acquisition_sources';
 export const VALID_SORT_ORDERS = ['date_desc', 'date_asc', 'name_desc', 'name_asc'];
 export const VALID_ACQUISITION_TYPES = ['atx', 'season', 'miniseason'];
 export const GROUPED_ACQUISITION_TYPES = ['season', 'miniseason'];
+
+export const LIST_COLUMNS = 'i.formId, i.nameEn, i.nameRu, i.mainImage, i.categoryFormId, i.subcategoryFormId, i.slug, i.isPTS, i.supportItem, i.supportBundles';

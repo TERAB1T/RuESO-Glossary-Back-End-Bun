@@ -5,7 +5,7 @@ import {
 	TES_VALID_GAMES, TES_DB_PATHS, TES_SERVER_GAMES,
 	FALLOUT_VALID_GAMES, FALLOUT_DB_PATHS, FALLOUT_SERVER_GAMES
 } from "../glossary/constants";
-import { prepareHtml } from "../utils";
+import { escapeQuery, prepareHtml } from "../utils";
 
 const MAX_LENGTH = 200;
 
@@ -58,12 +58,6 @@ export class GlossarySearch {
 
 	#validateGames(games: string[]): string[] {
 		return Array.from(new Set(games).intersection(new Set(this.#validGames)));
-	}
-
-	#escapeQuery(query: string): string {
-		let escaped = query.replace(/"/g, '""').replace(/ /g, ' ');
-		escaped = escaped.replace(/[‘’]/g, "'").replace(/[“”„]/g, '""');
-		return `"${escaped}"`;
 	}
 
 	async searchTerm() {
@@ -122,24 +116,24 @@ export class GlossarySearch {
 		if (this.#searchValue) {
 			if (/[а-яА-Я]/.test(this.#searchValue)) {
 				queryConditions.push('ru MATCH ?');
-				params.push(this.#escapeQuery(this.#searchValue));
+				params.push(escapeQuery(this.#searchValue));
 			} else {
 				queryConditions.push(`${TABLE_NAME} MATCH ?`);
-				params.push(`en:${this.#escapeQuery(this.#searchValue)} OR ru:${this.#escapeQuery(this.#searchValue)}`);
+				params.push(`en:${escapeQuery(this.#searchValue)} OR ru:${escapeQuery(this.#searchValue)}`);
 			}
 		}
 
 		if (this.#filters[1]) {
 			queryConditions.push('type MATCH ?');
-			params.push(this.#escapeQuery(this.#filters[1]));
+			params.push(escapeQuery(this.#filters[1]));
 		}
 		if (this.#filters[2]) {
 			queryConditions.push('en MATCH ?');
-			params.push(this.#escapeQuery(this.#filters[2]));
+			params.push(escapeQuery(this.#filters[2]));
 		}
 		if (this.#filters[3]) {
 			queryConditions.push('ru MATCH ?');
-			params.push(this.#escapeQuery(this.#filters[3]));
+			params.push(escapeQuery(this.#filters[3]));
 		}
 
 		// Selecting every game filters nothing but costs an extra FTS lookup over all rows.

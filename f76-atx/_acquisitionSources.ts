@@ -1,7 +1,7 @@
 import type { Database } from "bun:sqlite";
 import { getDb } from "../db";
-import { DB_PATH, TABLE_NAME_ITEMS, TABLE_NAME_CATEGORIES, TABLE_NAME_ACQUISITION_SOURCES, GROUPED_ACQUISITION_TYPES } from "./constants";
-import { escapeQuery, getF76AtxOrderClause } from "../utils";
+import { DB_PATH, TABLE_NAME_ITEMS, TABLE_NAME_CATEGORIES, TABLE_NAME_ACQUISITION_SOURCES, GROUPED_ACQUISITION_TYPES, LIST_COLUMNS } from "./constants";
+import { buildItemListQuery, getItemOrderClause, queryItemPage } from "../itemList";
 
 import type {
 	AcquisitionSource,
@@ -45,66 +45,15 @@ export class AcquisitionSources {
 		isPTS?: boolean,
 		hasSupport?: boolean
 	): Promise<AcquisitionTypeItemsResponse | null> {
-		const offset = (page - 1) * pageSize;
+		const { items, pagination } = queryItemPage<Item>(this.#db, LIST_COLUMNS, {
+			table: TABLE_NAME_ITEMS,
+			conditions: [['i.acquisitionSourceType = ?', type]],
+			filter,
+			isPTS,
+			hasSupport
+		}, order, page, pageSize);
 
-		const conditions: string[] = [];
-		const params: any[] = [];
-
-		const useFilter = filter && filter.length > 2;
-		const baseTable = useFilter ? 'items_fts' : TABLE_NAME_ITEMS;
-
-		if (useFilter) {
-			const escapedFilter = escapeQuery(filter);
-			conditions.push(`${baseTable} MATCH ?`);
-			params.push(escapedFilter);
-		}
-
-		conditions.push('i.acquisitionSourceType = ?');
-		params.push(type);
-
-		if (isPTS === true) {
-			conditions.push('i.isPTS = 1');
-		}
-
-		if (hasSupport === true) {
-			conditions.push('(i.supportItem IS NOT NULL OR i.supportBundles IS NOT NULL)');
-		}
-
-		const whereClause = `WHERE ${conditions.join(' AND ')}`;
-		const orderClause = getF76AtxOrderClause(order);
-
-		const fromClause = useFilter
-			? `FROM ${TABLE_NAME_ITEMS} i JOIN items_fts ON items_fts.formId = i.formId`
-			: `FROM ${TABLE_NAME_ITEMS} i`;
-
-		const items = this.#db.query<Item, any[]>(
-			`SELECT i.formId, i.nameEn, i.nameRu, i.mainImage, i.categoryFormId, i.subcategoryFormId, i.slug, i.isPTS, i.supportItem, i.supportBundles
-		${fromClause}
-		${whereClause}
-		${orderClause}
-		LIMIT ? OFFSET ?`
-		).all(...params, pageSize, offset);
-
-		const countFromClause = useFilter
-			? `FROM items_fts JOIN ${TABLE_NAME_ITEMS} i ON items_fts.formId = i.formId`
-			: `FROM ${TABLE_NAME_ITEMS} i`;
-
-		const totalItems = (this.#db.query<{ count: number }, any[]>(
-			`SELECT COUNT(*) AS count
-		${countFromClause}
-		${whereClause}`
-		).get(...params) as { count: number }).count;
-
-		return {
-			type,
-			items,
-			pagination: {
-				page,
-				page_size: pageSize,
-				total_items: totalItems,
-				total_pages: Math.ceil(totalItems / pageSize)
-			}
-		};
+		return { type, items, pagination };
 	}
 
 	async getSourceItems(
@@ -117,54 +66,27 @@ export class AcquisitionSources {
 		isPTS?: boolean,
 		hasSupport?: boolean
 	): Promise<AcquisitionSourceItemsResponse | null> {
-		const offset = (page - 1) * pageSize;
-
 		const acquisitionSource = this.#db.query<AcquisitionSource, [string, number]>(
 			`SELECT * FROM ${TABLE_NAME_ACQUISITION_SOURCES} WHERE type = ? AND number = ?`
 		).get(type, number);
 
 		if (!acquisitionSource) return null;
 
-		const conditions: string[] = [];
-		const params: any[] = [];
-
-		const useFilter = filter && filter.length > 2;
-		const baseTable = useFilter ? 'items_fts' : TABLE_NAME_ITEMS;
-
-		if (useFilter) {
-			const escapedFilter = escapeQuery(filter);
-			conditions.push(`${baseTable} MATCH ?`);
-			params.push(escapedFilter);
-		}
-
-		conditions.push('i.acquisitionSourceType = ?');
-		params.push(type);
-
-		conditions.push('i.acquisitionSourceNumber = ?');
-		params.push(number);
-
-		if (isPTS === true) {
-			conditions.push('i.isPTS = 1');
-		}
-
-		if (hasSupport === true) {
-			conditions.push('(i.supportItem IS NOT NULL OR i.supportBundles IS NOT NULL)');
-		}
-
-		const whereClause = `WHERE ${conditions.join(' AND ')}`;
-
-		const fromClause = useFilter
-			? `FROM ${TABLE_NAME_ITEMS} i JOIN items_fts ON items_fts.formId = i.formId`
-			: `FROM ${TABLE_NAME_ITEMS} i`;
-
-		const selectColumns = 'i.formId, i.nameEn, i.nameRu, i.mainImage, i.categoryFormId, i.subcategoryFormId, i.slug, i.isPTS, i.supportItem, i.supportBundles';
+		const listOptions = {
+			table: TABLE_NAME_ITEMS,
+			conditions: [['i.acquisitionSourceType = ?', type], ['i.acquisitionSourceNumber = ?', number]] as [string, string | number][],
+			filter,
+			isPTS,
+			hasSupport
+		};
 
 		// Seasons are small enough to show on a single page, grouped under category headers
 		if (GROUPED_ACQUISITION_TYPES.includes(type)) {
-			const orderClause = getF76AtxOrderClause(order).replace('ORDER BY', 'ORDER BY c.orderId ASC,');
+			const { fromClause, whereClause, params } = buildItemListQuery(listOptions);
+			const orderClause = getItemOrderClause(order).replace('ORDER BY', 'ORDER BY c.orderId ASC,');
 
 			const items = this.#db.query<Item, any[]>(
-				`SELECT ${selectColumns}
+				`SELECT ${LIST_COLUMNS}
 			${fromClause}
 			JOIN ${TABLE_NAME_CATEGORIES} c ON c.formId = i.categoryFormId
 			${whereClause}
@@ -197,36 +119,8 @@ export class AcquisitionSources {
 			};
 		}
 
-		const orderClause = getF76AtxOrderClause(order);
+		const { items, pagination } = queryItemPage<Item>(this.#db, LIST_COLUMNS, listOptions, order, page, pageSize);
 
-		const items = this.#db.query<Item, any[]>(
-			`SELECT ${selectColumns}
-		${fromClause}
-		${whereClause}
-		${orderClause}
-		LIMIT ? OFFSET ?`
-		).all(...params, pageSize, offset);
-
-		const countFromClause = useFilter
-			? `FROM items_fts JOIN ${TABLE_NAME_ITEMS} i ON items_fts.formId = i.formId`
-			: `FROM ${TABLE_NAME_ITEMS} i`;
-
-		const totalItems = (this.#db.query<{ count: number }, any[]>(
-			`SELECT COUNT(*) AS count
-		${countFromClause}
-		${whereClause}`
-		).get(...params) as { count: number }).count;
-
-		return {
-			acquisitionSource,
-			items,
-			categories: [],
-			pagination: {
-				page,
-				page_size: pageSize,
-				total_items: totalItems,
-				total_pages: Math.ceil(totalItems / pageSize)
-			}
-		};
+		return { acquisitionSource, items, categories: [], pagination };
 	}
 }
