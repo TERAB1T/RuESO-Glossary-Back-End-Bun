@@ -88,6 +88,13 @@ export class Items {
 
 		return {
 			...itemWithoutRawEntitlements,
+			// SQLite stores BOOLEAN columns as 0/1.
+			camp: !!item.camp,
+			shelter: !!item.shelter,
+			workshop: !!item.workshop,
+			campOwned: !!item.campOwned,
+			requiresPower: !!item.requiresPower,
+			powerConnectable: !!item.powerConnectable,
 			learnConditions: item.learnConditions ? JSON.parse(item.learnConditions) : null,
 			produces: item.produces ? JSON.parse(item.produces) : null,
 			display: item.display ? JSON.parse(item.display) : null,

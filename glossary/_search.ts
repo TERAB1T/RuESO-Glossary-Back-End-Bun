@@ -68,7 +68,6 @@ export class GlossarySearch {
 	async searchTerm() {
 		const db = getDb(this.#dbPath);
 
-		const startTime = Date.now();
 		const { query, params } = this.#buildQuery();
 
 		let finalQuery = query;
@@ -79,7 +78,6 @@ export class GlossarySearch {
 		params.push(this.#length.toString(), this.#start.toString());
 
 		const results = db.query(finalQuery).all(params);
-		console.log(`Fetching data: ${(Date.now() - startTime) / 1000} seconds`);
 
 		// A short page means every match from #start on is already fetched, so the total is
 		// known without a COUNT, which would repeat the whole FTS lookup (costly for long phrases).
@@ -88,7 +86,6 @@ export class GlossarySearch {
 		if (results.length < this.#length && (this.#start === 0 || results.length > 0)) {
 			total = this.#start + results.length;
 		} else {
-			const startCountTime = Date.now();
 			const { query: countQuery, params: countParams } = this.#buildQuery(true);
 
 			const isCacheable = !this.#searchValue && !this.#filters.some(Boolean);
@@ -107,8 +104,6 @@ export class GlossarySearch {
 					cache.set(cacheKey, total);
 				}
 			}
-
-			console.log(`Fetching total records: ${(Date.now() - startCountTime) / 1000} seconds`);
 		}
 
 		return {
