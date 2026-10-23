@@ -189,6 +189,13 @@ export interface RecipeSiblingItem {
 	slug: string | null;
 }
 
+export interface ShopInfo {
+	descriptionEn: string | null;
+	descriptionRu: string | null;
+	screenshots: string[] | null;
+	isSet: boolean;
+}
+
 export interface ItemWithRelations extends Item {
 	category: Pick<Category, 'formId' | 'nameEn' | 'nameRu' | 'slug'> | null;
 	subcategory: Pick<Subcategory, 'formId' | 'nameEn' | 'nameRu' | 'slug'> | null;
@@ -212,6 +219,7 @@ export interface ItemWithRelations extends Item {
 	buffs: Buff[] | null;
 	arcadeGame: ArcadeGame | null;
 	unlockedByEntitlements: UnlockedByEntitlement[] | null;
+	shopInfo: ShopInfo | null;
 	recipe: RecipeInfo | null;
 	recipeItems: RecipeSiblingItem[];
 }

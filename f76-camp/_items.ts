@@ -16,7 +16,8 @@ import type {
 	UnlockedByEntitlement,
 	RecipeInfo,
 	RecipeComponent,
-	RecipeSiblingItem
+	RecipeSiblingItem,
+	ShopInfo
 } from "./types";
 
 interface UnlockedByEntitlementRow {
@@ -37,6 +38,30 @@ interface RecipeRow {
 	descriptionEn: string | null;
 	descriptionRu: string | null;
 	components: string | null;
+}
+
+interface ShopRow {
+	formId: string;
+	descriptionEn: string | null;
+	descriptionRu: string | null;
+	screenshots: string | null;
+	campUnlockedItems: string | null;
+}
+
+const isWarningLine = (line: string) => line.startsWith('-') && line.endsWith('-');
+
+// Shop descriptions carry technical notes like "- C.A.M.P. ITEMS APPEAR WHILE IN C.A.M.P. MODE. -".
+// The Russian text often lacks the dashes, but both languages have the same line layout, so a line
+// is dropped when either language marks it. If the layouts differ, each language is judged alone.
+function cleanShopDescriptions(en: string | null, ru: string | null): { en: string | null; ru: string | null } {
+	const enLines = en?.split('\n').map(line => line.trim());
+	const ruLines = ru?.split('\n').map(line => line.trim());
+	const aligned = !!enLines && !!ruLines && enLines.length === ruLines.length;
+
+	const clean = (lines: string[] | undefined, other: string[] | undefined) =>
+		lines?.filter((line, i) => !isWarningLine(line) && !(aligned && isWarningLine(other![i]))).join('\n').replace(/\n{3,}/g, '\n\n').trim() || null;
+
+	return { en: clean(enLines, ruLines), ru: clean(ruLines, enLines) };
 }
 
 export class Items {
@@ -103,6 +128,7 @@ export class Items {
 			category: category || null,
 			subcategory: subcategory || null,
 			unlockedByEntitlements: this.#resolveUnlockedByEntitlements(unlockEntitlements),
+			shopInfo: this.#resolveShopInfo(unlockEntitlements),
 			recipe: item.recipeFormId ? this.#resolveRecipe(item.recipeFormId) : null,
 			recipeItems: item.recipeFormId ? this.#resolveRecipeItems(item.recipeFormId, item.formId) : []
 		};
@@ -133,6 +159,41 @@ export class Items {
 			screenshots: row.screenshots ? row.screenshots.split(';') : null,
 			slug: row.slug
 		}));
+	}
+
+	#resolveShopInfo(raw: string | null): ShopInfo | null {
+		const formIds = raw?.split('|').filter(Boolean) ?? [];
+		if (formIds.length === 0) return null;
+
+		const placeholders = formIds.map(() => '?').join(',');
+
+		const rows = getDb(ATX_DB_PATH).query<ShopRow, string[]>(
+			`SELECT formId, descriptionEn, descriptionRu, screenshots, campUnlockedItems
+			FROM ${ATX_TABLE_NAME_ITEMS}
+			WHERE formId IN (${placeholders})`
+		).all(...formIds);
+
+		if (rows.length === 0) return null;
+
+		const campItemCount = (row: ShopRow) => row.campUnlockedItems?.split('|').filter(Boolean).length ?? 0;
+
+		// Several entitlements can unlock one item: a generic box plus its skin. The one covering the fewest
+		// C.A.M.P. items is the most specific; on a tie the first in unlock order wins.
+		const [best] = rows.sort((a, b) =>
+			campItemCount(a) - campItemCount(b) || formIds.indexOf(a.formId) - formIds.indexOf(b.formId)
+		);
+
+		const { en, ru } = cleanShopDescriptions(best.descriptionEn, best.descriptionRu);
+		const screenshots = best.screenshots?.split(';').filter(Boolean) ?? [];
+
+		if (!en && !ru && screenshots.length === 0) return null;
+
+		return {
+			descriptionEn: en,
+			descriptionRu: ru,
+			screenshots: screenshots.length > 0 ? screenshots : null,
+			isSet: campItemCount(best) > 1
+		};
 	}
 
 	#resolveRecipe(recipeFormId: string): RecipeInfo | null {
