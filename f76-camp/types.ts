@@ -189,6 +189,16 @@ export interface RecipeSiblingItem {
 	slug: string | null;
 }
 
+export interface SharedLimitCategory extends Pick<Category, 'formId' | 'nameEn' | 'nameRu' | 'slug'> {
+	count: number;
+}
+
+export interface SharedLimit {
+	total: number;
+	items: RecipeSiblingItem[];
+	categories: SharedLimitCategory[];
+}
+
 export interface ShopInfo {
 	descriptionEn: string | null;
 	descriptionRu: string | null;
@@ -220,6 +230,7 @@ export interface ItemWithRelations extends Item {
 	arcadeGame: ArcadeGame | null;
 	unlockedByEntitlements: UnlockedByEntitlement[] | null;
 	shopInfo: ShopInfo | null;
+	sharedLimit: SharedLimit | null;
 	recipe: RecipeInfo | null;
 	recipeItems: RecipeSiblingItem[];
 }

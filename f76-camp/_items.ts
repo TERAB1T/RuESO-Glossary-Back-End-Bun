@@ -17,6 +17,8 @@ import type {
 	RecipeInfo,
 	RecipeComponent,
 	RecipeSiblingItem,
+	SharedLimit,
+	SharedLimitCategory,
 	ShopInfo
 } from "./types";
 
@@ -48,7 +50,10 @@ interface ShopRow {
 	campUnlockedItems: string | null;
 }
 
-const isWarningLine = (line: string) => line.startsWith('-') && line.endsWith('-');
+// Groups sharing a limit reach 530 items, and listing them all would bury the page; larger groups get a per-category breakdown instead.
+const SHARED_LIMIT_LIST_MAX = 100;
+
+const isWarningLine =(line: string) => line.startsWith('-') && line.endsWith('-');
 
 // Shop descriptions carry technical notes like "- C.A.M.P. ITEMS APPEAR WHILE IN C.A.M.P. MODE. -".
 // The Russian text often lacks the dashes, but both languages have the same line layout, so a line
@@ -129,6 +134,7 @@ export class Items {
 			subcategory: subcategory || null,
 			unlockedByEntitlements: this.#resolveUnlockedByEntitlements(unlockEntitlements),
 			shopInfo: this.#resolveShopInfo(unlockEntitlements),
+			sharedLimit: this.#resolveSharedLimit(item.campMaxFormId, item.formId),
 			recipe: item.recipeFormId ? this.#resolveRecipe(item.recipeFormId) : null,
 			recipeItems: item.recipeFormId ? this.#resolveRecipeItems(item.recipeFormId, item.formId) : []
 		};
@@ -214,6 +220,38 @@ export class Items {
 			descriptionRu: row.descriptionRu,
 			components: row.components ? (JSON.parse(row.components) as RecipeComponent[]) : []
 		};
+	}
+
+	// Items share a limit when their recipes point at the same C.A.M.P. limit global.
+	#resolveSharedLimit(campMaxFormId: string | null, excludeFormId: string): SharedLimit | null {
+		if (!campMaxFormId) return null;
+
+		const { total } = this.#db.query<{ total: number }, [string, string]>(
+			`SELECT COUNT(*) AS total FROM ${TABLE_NAME_ITEMS} WHERE campMaxFormId = ? AND formId != ?`
+		).get(campMaxFormId, excludeFormId)!;
+
+		if (total === 0) return null;
+		if (total > SHARED_LIMIT_LIST_MAX) {
+			const categories = this.#db.query<SharedLimitCategory, [string, string]>(
+				`SELECT c.formId, c.nameEn, c.nameRu, c.slug, COUNT(*) AS count
+			FROM ${TABLE_NAME_ITEMS} i
+			JOIN ${TABLE_NAME_CATEGORIES} c ON c.formId = i.categoryFormId
+			WHERE i.campMaxFormId = ? AND i.formId != ?
+			GROUP BY c.formId
+			ORDER BY count DESC`
+			).all(campMaxFormId, excludeFormId);
+
+			return { total, items: [], categories };
+		}
+
+		const items = this.#db.query<RecipeSiblingItem, [string, string]>(
+			`SELECT formId, nameEn, nameRu, slug
+		FROM ${TABLE_NAME_ITEMS}
+		WHERE campMaxFormId = ? AND formId != ?
+		ORDER BY orderInGame`
+		).all(campMaxFormId, excludeFormId);
+
+		return { total, items, categories: [] };
 	}
 
 	#resolveRecipeItems(recipeFormId: string, excludeFormId: string): RecipeSiblingItem[] {
