@@ -53,6 +53,14 @@ interface ShopRow {
 // Groups sharing a limit reach 530 items, and listing them all would bury the page; larger groups get a per-category breakdown instead.
 const SHARED_LIMIT_LIST_MAX = 100;
 
+// Recipes of collectors whose description only says what they produce, which the production block shows in full.
+// Interim list: descriptions of other collectors hold placement rules ("only on dirt", "on a deposit") and stay.
+const RECIPES_DESCRIBED_BY_PRODUCES = new Set([
+	'006f7e7d', '006d342e', '006f7e8a', '00691c00', '008d2af8', '008fae0a', '0068e77a', '00773e1f',
+	'007813f7', '0067adbf', '0067f3aa', '00662e68', '0075fbee', '006f0685', '007df844', '008f10dd',
+	'005fe789', '007ae26d', '007ae26e', '007ae26f', '0076d045',
+]);
+
 const isWarningLine =(line: string) => line.startsWith('-') && line.endsWith('-');
 
 // Shop descriptions carry technical notes like "- C.A.M.P. ITEMS APPEAR WHILE IN C.A.M.P. MODE. -".
@@ -116,6 +124,13 @@ export class Items {
 
 		const { unlockEntitlements, ...itemWithoutRawEntitlements } = item;
 
+		// The recipe description is the page's lead text; drop it where a block below already says the same.
+		const recipe = item.recipeFormId ? this.#resolveRecipe(item.recipeFormId) : null;
+		if (recipe && (item.storage || RECIPES_DESCRIBED_BY_PRODUCES.has(item.recipeFormId))) {
+			recipe.descriptionEn = null;
+			recipe.descriptionRu = null;
+		}
+
 		return {
 			...itemWithoutRawEntitlements,
 			// SQLite stores BOOLEAN columns as 0/1.
@@ -137,7 +152,7 @@ export class Items {
 			unlockedByEntitlements: this.#resolveUnlockedByEntitlements(unlockEntitlements),
 			shopInfo: this.#resolveShopInfo(unlockEntitlements),
 			sharedLimit: this.#resolveSharedLimit(item.campMaxFormId, item.formId),
-			recipe: item.recipeFormId ? this.#resolveRecipe(item.recipeFormId) : null,
+			recipe,
 			recipeItems: item.recipeFormId ? this.#resolveRecipeItems(item.recipeFormId, item.formId) : []
 		};
 	}
