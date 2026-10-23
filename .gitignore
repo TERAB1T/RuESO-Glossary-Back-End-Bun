@@ -178,3 +178,6 @@ dist
 
 # Finder (MacOS) folder config
 .DS_Store
+
+# Regression check snapshots (scripts/check-api.ts)
+.checks/

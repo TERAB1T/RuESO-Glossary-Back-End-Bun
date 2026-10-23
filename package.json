@@ -2,6 +2,9 @@
   "name": "rueso-glossary-back-end-bun",
   "module": "index.ts",
   "type": "module",
+  "scripts": {
+    "check:api": "bun scripts/check-api.ts"
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },
