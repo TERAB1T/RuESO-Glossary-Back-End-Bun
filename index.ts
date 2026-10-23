@@ -54,6 +54,24 @@ const app = new Elysia()
 		],
 	}))
 
+	// Every section's "last updated" at once: the frontend loads it with any page.
+	.get("/updated", async () => {
+		const [library, f76AtomicShop, f76Camp, glossaryTes, glossaryFallout] = await Promise.all([
+			getFileLastModifiedDate(LIBRARY_DB_PATH),
+			getFileLastModifiedDate(F76ATX_DB_PATH),
+			getFileLastModifiedDate(F76CAMP_DB_PATH),
+			new GlossaryUpdated("tes").getUpdated(),
+			new GlossaryUpdated("fallout").getUpdated(),
+		]);
+
+		return {
+			library: { lastModified: library },
+			f76AtomicShop: { lastModified: f76AtomicShop },
+			f76Camp: { lastModified: f76Camp },
+			glossary: { tes: glossaryTes, fallout: glossaryFallout },
+		};
+	})
+
 	.get("/glossary/tes", async ({ query }) => {
 		const glossarySearch = new GlossarySearch(query, "tes");
 		return await glossarySearch.searchTerm();
