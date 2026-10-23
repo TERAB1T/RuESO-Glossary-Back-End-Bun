@@ -189,6 +189,14 @@ export interface RecipeSiblingItem {
 	slug: string | null;
 }
 
+export interface StorageInfo {
+	group: string;
+	lists: { formId: string; en: string | null; ru: string | null }[];
+	limit: number | null;
+	items?: { formId: string; editorId: string | null; en: string | null; ru: string | null; type: string | null }[];
+	chargeRate?: number;
+}
+
 export interface SharedLimitCategory extends Pick<Category, 'formId' | 'nameEn' | 'nameRu' | 'slug'> {
 	count: number;
 }
@@ -226,6 +234,8 @@ export interface ItemWithRelations extends Item {
 	learnConditions: unknown[] | null;
 	produces: ProducesMode[] | null;
 	display: DisplayInfo | null;
+	storage: StorageInfo | null;
+	spoilRate: number | null;
 	buffs: Buff[] | null;
 	arcadeGame: ArcadeGame | null;
 	unlockedByEntitlements: UnlockedByEntitlement[] | null;
