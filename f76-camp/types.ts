@@ -245,3 +245,50 @@ export interface ItemWithRelations extends Item {
 	recipe: RecipeInfo | null;
 	recipeItems: RecipeSiblingItem[];
 }
+export interface SubItemComponent {
+	formId: string;
+	name: LocalizedName | null;
+	count: number;
+}
+
+export type SubItemEffectKind = 'hunger' | 'thirst' | 'rads' | 'disease' | 'feral';
+export type SubItemEffectCondition = 'ghoul' | 'notGhoul' | 'night' | 'ally';
+
+export interface SubItemEffect {
+	kind: SubItemEffectKind | null;
+	mgefFormId: string;
+	description: LocalizedName | null;
+	magnitude: number;
+	duration: number;
+	requiresPerk: { formId: string; name: LocalizedName | null; rank: number | null } | null;
+	condition: SubItemEffectCondition | null;
+}
+
+export interface SubItemConsumable {
+	effects: SubItemEffect[];
+	spoilMinutes: number | null;
+	ferments: boolean;
+	spoilsInto: { formId: string; name: LocalizedName | null } | null;
+	addiction: { name: LocalizedName | null; chance: number } | null;
+}
+
+export interface SubItemDetails {
+	components?: SubItemComponent[];
+	consumable?: SubItemConsumable;
+	ammo?: { formId: string; name: LocalizedName | null };
+}
+
+export interface SubItem {
+	formId: string;
+	editorId: string | null;
+	formType: string;
+	type: string | null;
+	nameEn: string | null;
+	nameRu: string | null;
+	descriptionEn: string | null;
+	descriptionRu: string | null;
+	weight: number | null;
+	value: number | null;
+	details: SubItemDetails | null;
+	usedIn: RecipeSiblingItem[];
+}

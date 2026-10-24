@@ -232,6 +232,13 @@ const app = new Elysia()
 		return result ?? notFound(set);
 	})
 
+	.get('/f76/camp/subitems/:form_id', async ({ params, set }) => {
+		if (!isHex(params.form_id)) return notFound(set);
+
+		const result = await new F76CampItems().getSubItem(params.form_id);
+		return result ?? notFound(set);
+	})
+
 	.get("/f76/camp/updated", async () => {
 		const lastModified = await getFileLastModifiedDate(F76CAMP_DB_PATH);
 		return { lastModified };

@@ -1,6 +1,6 @@
 import type { Database } from "bun:sqlite";
 import { getDb } from "../db";
-import { DB_PATH, TABLE_NAME_ITEMS, TABLE_NAME_CATEGORIES, TABLE_NAME_SUBCATEGORIES, TABLE_NAME_RECIPES, LIST_COLUMNS } from "./constants";
+import { DB_PATH, TABLE_NAME_ITEMS, TABLE_NAME_CATEGORIES, TABLE_NAME_SUBCATEGORIES, TABLE_NAME_RECIPES, TABLE_NAME_SUBITEMS, LIST_COLUMNS } from "./constants";
 import {
 	DB_PATH as ATX_DB_PATH,
 	TABLE_NAME_ITEMS as ATX_TABLE_NAME_ITEMS
@@ -19,7 +19,8 @@ import type {
 	RecipeSiblingItem,
 	SharedLimit,
 	SharedLimitCategory,
-	ShopInfo
+	ShopInfo,
+	SubItem
 } from "./types";
 
 interface UnlockedByEntitlementRow {
@@ -314,6 +315,28 @@ export class Items {
 		).all(campMaxFormId, excludeFormId);
 
 		return { total, items, categories: [] };
+	}
+
+	// An item listed in collector and storage tables (collector output, candy bowl), with the C.A.M.P. objects that list it.
+	async getSubItem(formId: string): Promise<SubItem | null> {
+		const row = this.#db.query<Omit<SubItem, 'details' | 'usedIn'> & { details: string | null; usedIn: string }, [string]>(
+			`SELECT formId, editorId, formType, type, nameEn, nameRu, descriptionEn, descriptionRu, weight, value, details, usedIn
+		FROM ${TABLE_NAME_SUBITEMS}
+		WHERE formId = ?`
+		).get(formId);
+
+		if (!row) return null;
+
+		// An item can sit in several subcategories (several rows); one link per object is enough.
+		const usedIn = this.#db.query<RecipeSiblingItem, [string]>(
+			`SELECT i.formId, i.nameEn, i.nameRu, i.slug
+		FROM json_each(?) j
+		JOIN ${TABLE_NAME_ITEMS} i ON i.formId = j.value
+		GROUP BY i.formId
+		ORDER BY MIN(i.orderByName)`
+		).all(row.usedIn);
+
+		return { ...row, details: row.details ? JSON.parse(row.details) : null, usedIn };
 	}
 
 	#resolveRecipeItems(recipeFormId: string, excludeFormId: string): RecipeSiblingItem[] {
