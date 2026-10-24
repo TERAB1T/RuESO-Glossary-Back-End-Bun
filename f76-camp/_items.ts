@@ -66,6 +66,11 @@ const RECIPES_DESCRIBED_BY_PRODUCES = new Set([
 const SHELTER_BAN_LINE_EN = 'This item cannot be built inside of a Shelter.';
 const SHELTER_BAN_LINE_RU = 'Этот предмет нельзя изготовить в укрытии.';
 
+// Recipe descriptions that only state the surface rule, which the page now builds from the item's surface (matched by the English text).
+const SURFACE_RULE_DESCRIPTIONS_EN = new Set([
+	'Can only be placed in dirt.', 'Must be placed in dirt.', 'Can only be placed in water.', 'Must be placed in the water.',
+]);
+
 const isWarningLine =(line: string) => line.startsWith('-') && line.endsWith('-');
 
 // Shop descriptions carry technical notes like "- C.A.M.P. ITEMS APPEAR WHILE IN C.A.M.P. MODE. -".
@@ -106,7 +111,7 @@ export class Items {
 	}
 
 	async getItem(itemFormId: string): Promise<ItemWithRelations | null> {
-		const item = this.#db.query<Item & { camp: boolean; shelter: boolean; workshop: boolean; campOwned: boolean; campMaxFormId: string | null; campMaxValue: number | null; workshopMaxFormId: string | null; workshopMaxValue: number | null; carryWeight: number | null; requiresPower: boolean; powerRequired: number; powerConnectable: boolean; powerGenerated: number; powerRadiated: number; learnConditions: string | null; produces: string | null; display: string | null; storage: string | null; spoilRate: number | null; buffs: string | null; arcadeGame: string | null; unlockEntitlements: string | null; recipeFormId: string }, [string]>(
+		const item = this.#db.query<Item & { camp: boolean; shelter: boolean; workshop: boolean; campOwned: boolean; campMaxFormId: string | null; campMaxValue: number | null; workshopMaxFormId: string | null; workshopMaxValue: number | null; carryWeight: number | null; requiresPower: boolean; powerRequired: number; powerConnectable: boolean; powerGenerated: number; powerRadiated: number; learnConditions: string | null; produces: string | null; display: string | null; storage: string | null; spoilRate: number | null; surface: 'dirt' | 'water' | null; buffs: string | null; arcadeGame: string | null; unlockEntitlements: string | null; recipeFormId: string }, [string]>(
 			`SELECT * FROM ${TABLE_NAME_ITEMS} WHERE formId = ?`
 		).get(itemFormId);
 
@@ -131,7 +136,8 @@ export class Items {
 
 		// The recipe description is the page's lead text; drop it where a block below already says the same.
 		const recipe = item.recipeFormId ? this.#resolveRecipe(item.recipeFormId) : null;
-		if (recipe && (item.storage || RECIPES_DESCRIBED_BY_PRODUCES.has(item.recipeFormId))) {
+		if (recipe && (item.storage || RECIPES_DESCRIBED_BY_PRODUCES.has(item.recipeFormId)
+			|| (item.surface && SURFACE_RULE_DESCRIPTIONS_EN.has(recipe.descriptionEn?.trim() ?? '')))) {
 			recipe.descriptionEn = null;
 			recipe.descriptionRu = null;
 		}
@@ -150,6 +156,7 @@ export class Items {
 			display: item.display ? JSON.parse(item.display) : null,
 			storage: item.storage ? JSON.parse(item.storage) : null,
 			spoilRate: item.spoilRate ?? null,
+			surface: item.surface ?? null,
 			buffs: item.buffs ? JSON.parse(item.buffs) : null,
 			arcadeGame: item.arcadeGame ? JSON.parse(item.arcadeGame) : null,
 			category: category || null,

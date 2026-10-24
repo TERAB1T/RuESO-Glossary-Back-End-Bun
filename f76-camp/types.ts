@@ -236,6 +236,7 @@ export interface ItemWithRelations extends Item {
 	display: DisplayInfo | null;
 	storage: StorageInfo | null;
 	spoilRate: number | null;
+	surface: 'dirt' | 'water' | null;
 	buffs: Buff[] | null;
 	arcadeGame: ArcadeGame | null;
 	unlockedByEntitlements: UnlockedByEntitlement[] | null;
