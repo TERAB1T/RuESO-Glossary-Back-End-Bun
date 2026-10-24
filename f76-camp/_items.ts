@@ -66,6 +66,12 @@ const RECIPES_DESCRIBED_BY_PRODUCES = new Set([
 const SHELTER_BAN_LINE_EN = 'This item cannot be built inside of a Shelter.';
 const SHELTER_BAN_LINE_RU = 'Этот предмет нельзя изготовить в укрытии.';
 
+// Recipes whose description repeats a line of the shop text ("Changes weather within C.A.M.P. radius when powered.", the sink's "will dispense water").
+const RECIPES_DESCRIBED_BY_SHOP_TEXT = new Set(['006ee8ed', '005771b5']);
+
+// Recipe descriptions that are not shown at all.
+const RECIPES_WITH_HIDDEN_DESCRIPTION = new Set(['0042f115']);
+
 // Recipe descriptions that only state the surface rule, which the page now builds from the item's surface (matched by the English text).
 const SURFACE_RULE_DESCRIPTIONS_EN = new Set([
 	'Can only be placed in dirt.', 'Must be placed in dirt.', 'Can only be placed in water.', 'Must be placed in the water.',
@@ -136,7 +142,8 @@ export class Items {
 
 		// The recipe description is the page's lead text; drop it where a block below already says the same.
 		const recipe = item.recipeFormId ? this.#resolveRecipe(item.recipeFormId) : null;
-		if (recipe && (item.storage || RECIPES_DESCRIBED_BY_PRODUCES.has(item.recipeFormId)
+		const shopInfo = this.#resolveShopInfo(unlockEntitlements);
+		if (recipe && ((RECIPES_DESCRIBED_BY_SHOP_TEXT.has(item.recipeFormId) && (shopInfo?.descriptionRu || shopInfo?.descriptionEn)) || item.storage || RECIPES_DESCRIBED_BY_PRODUCES.has(item.recipeFormId) || RECIPES_WITH_HIDDEN_DESCRIPTION.has(item.recipeFormId)
 			|| (item.surface && SURFACE_RULE_DESCRIPTIONS_EN.has(recipe.descriptionEn?.trim() ?? '')))) {
 			recipe.descriptionEn = null;
 			recipe.descriptionRu = null;
@@ -162,7 +169,7 @@ export class Items {
 			category: category || null,
 			subcategory: subcategory || null,
 			unlockedByEntitlements: this.#resolveUnlockedByEntitlements(unlockEntitlements),
-			shopInfo: this.#resolveShopInfo(unlockEntitlements),
+			shopInfo,
 			sharedLimit: this.#resolveSharedLimit(item.campMaxFormId, item.formId),
 			recipe,
 			recipeItems: item.recipeFormId ? this.#resolveRecipeItems(item.recipeFormId, item.formId) : []
