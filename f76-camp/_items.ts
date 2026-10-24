@@ -61,6 +61,11 @@ const RECIPES_DESCRIBED_BY_PRODUCES = new Set([
 	'005fe789', '007ae26d', '007ae26e', '007ae26f', '0076d045',
 ]);
 
+// Already shown by the item's own data. The English line is always the same and the Russian one is found by its index;
+// a few texts have the Russian lines in a different order, so the Russian line is also matched as is.
+const SHELTER_BAN_LINE_EN = 'This item cannot be built inside of a Shelter.';
+const SHELTER_BAN_LINE_RU = 'Этот предмет нельзя изготовить в укрытии.';
+
 const isWarningLine =(line: string) => line.startsWith('-') && line.endsWith('-');
 
 // Shop descriptions carry technical notes like "- C.A.M.P. ITEMS APPEAR WHILE IN C.A.M.P. MODE. -".
@@ -72,7 +77,7 @@ function cleanShopDescriptions(en: string | null, ru: string | null): { en: stri
 	const aligned = !!enLines && !!ruLines && enLines.length === ruLines.length;
 
 	const clean = (lines: string[] | undefined, other: string[] | undefined) =>
-		lines?.filter((line, i) => !isWarningLine(line) && !(aligned && isWarningLine(other![i]))).join('\n').replace(/\n{3,}/g, '\n\n').trim() || null;
+		lines?.filter((line, i) => !isWarningLine(line) && !(aligned && isWarningLine(other![i])) && line !== SHELTER_BAN_LINE_EN && line !== SHELTER_BAN_LINE_RU && !(aligned && other![i] === SHELTER_BAN_LINE_EN)).join('\n').replace(/\n{3,}/g, '\n\n').trim() || null;
 
 	return { en: clean(enLines, ruLines), ru: clean(ruLines, enLines) };
 }
