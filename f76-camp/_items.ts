@@ -67,7 +67,7 @@ const SHELTER_BAN_LINE_EN = 'This item cannot be built inside of a Shelter.';
 const SHELTER_BAN_LINE_RU = 'Этот предмет нельзя изготовить в укрытии.';
 
 // Recipes whose description repeats a line of the shop text ("Changes weather within C.A.M.P. radius when powered.", the sink's "will dispense water").
-const RECIPES_DESCRIBED_BY_SHOP_TEXT = new Set(['006ee8ed', '005771b5']);
+const RECIPES_DESCRIBED_BY_SHOP_TEXT = new Set(['006ee8ed', '005771b5', '007ae545']);
 
 // Recipe descriptions that are not shown at all.
 const RECIPES_WITH_HIDDEN_DESCRIPTION = new Set(['0042f115']);
@@ -76,6 +76,31 @@ const RECIPES_WITH_HIDDEN_DESCRIPTION = new Set(['0042f115']);
 const SURFACE_RULE_DESCRIPTIONS_EN = new Set([
 	'Can only be placed in dirt.', 'Must be placed in dirt.', 'Can only be placed in water.', 'Must be placed in the water.',
 ]);
+
+// The shop texts of repair stations describe the same behaviour in several ways; every variant (matched by the English line)
+// is replaced with one wording, in the same position in both languages.
+const REPAIR_STATION_RECIPE = '007ae545';
+const REPAIR_NOTE_LINES_EN = new Set([
+	'Does not repair destroyed C.A.M.P. objects.',
+	'Repairs damaged C.A.M.P. objects but cannot rebuild objects that have been completed destroyed.',
+]);
+const REPAIR_NOTE = {
+	en: 'Restores health to damaged C.A.M.P. objects over time but cannot rebuild objects that have been completed destroyed.',
+	ru: 'Постепенно ремонтирует поврежденные объекты в C.A.M.P., но не восстанавливает полностью уничтоженные объекты.',
+};
+
+function replaceRepairNote(info: ShopInfo | null): void {
+	if (!info?.descriptionEn || !info.descriptionRu) return;
+	const enLines = info.descriptionEn.split('\n');
+	const ruLines = info.descriptionRu.split('\n');
+	if (enLines.length !== ruLines.length) return;
+	const i = enLines.findIndex(line => REPAIR_NOTE_LINES_EN.has(line.trim()));
+	if (i < 0) return;
+	enLines[i] = REPAIR_NOTE.en;
+	ruLines[i] = REPAIR_NOTE.ru;
+	info.descriptionEn = enLines.join('\n');
+	info.descriptionRu = ruLines.join('\n');
+}
 
 const isWarningLine =(line: string) => line.startsWith('-') && line.endsWith('-');
 
@@ -143,6 +168,7 @@ export class Items {
 		// The recipe description is the page's lead text; drop it where a block below already says the same.
 		const recipe = item.recipeFormId ? this.#resolveRecipe(item.recipeFormId) : null;
 		const shopInfo = this.#resolveShopInfo(unlockEntitlements);
+		if (item.recipeFormId === REPAIR_STATION_RECIPE) replaceRepairNote(shopInfo);
 		if (recipe && ((RECIPES_DESCRIBED_BY_SHOP_TEXT.has(item.recipeFormId) && (shopInfo?.descriptionRu || shopInfo?.descriptionEn)) || item.storage || RECIPES_DESCRIBED_BY_PRODUCES.has(item.recipeFormId) || RECIPES_WITH_HIDDEN_DESCRIPTION.has(item.recipeFormId)
 			|| (item.surface && SURFACE_RULE_DESCRIPTIONS_EN.has(recipe.descriptionEn?.trim() ?? '')))) {
 			recipe.descriptionEn = null;
