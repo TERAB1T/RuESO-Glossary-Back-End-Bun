@@ -214,6 +214,11 @@ export interface ShopInfo {
 	isSet: boolean;
 }
 
+export interface WeatherInfo {
+	type: 'radiation' | 'rain' | 'sandstorm' | 'other';
+	intenseEffects: boolean;
+}
+
 export interface ItemWithRelations extends Item {
 	category: Pick<Category, 'formId' | 'nameEn' | 'nameRu' | 'slug'> | null;
 	subcategory: Pick<Subcategory, 'formId' | 'nameEn' | 'nameRu' | 'slug'> | null;
@@ -237,6 +242,7 @@ export interface ItemWithRelations extends Item {
 	storage: StorageInfo | null;
 	spoilRate: number | null;
 	surface: 'dirt' | 'water' | null;
+	weather: WeatherInfo | null;
 	buffs: Buff[] | null;
 	arcadeGame: ArcadeGame | null;
 	unlockedByEntitlements: UnlockedByEntitlement[] | null;
