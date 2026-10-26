@@ -197,6 +197,15 @@ export interface StorageInfo {
 	chargeRate?: number;
 }
 
+export interface GivenItem {
+	formId: string;
+	editorId: string | null;
+	en: string | null;
+	ru: string | null;
+	type: string | null;
+	count: number;
+}
+
 export interface SharedLimitCategory extends Pick<Category, 'formId' | 'nameEn' | 'nameRu' | 'slug'> {
 	count: number;
 }
@@ -240,6 +249,7 @@ export interface ItemWithRelations extends Item {
 	produces: ProducesMode[] | null;
 	display: DisplayInfo | null;
 	storage: StorageInfo | null;
+	givesItems: GivenItem[] | null;
 	spoilRate: number | null;
 	surface: 'dirt' | 'water' | null;
 	weather: WeatherInfo | null;
