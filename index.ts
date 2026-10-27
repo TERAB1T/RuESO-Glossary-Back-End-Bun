@@ -12,12 +12,15 @@ import { Categories as F76AtxCategories } from "./f76-atx/_categories";
 import { Items as F76AtxItems } from "./f76-atx/_items";
 import { AcquisitionSources as F76AtxAcquisitionSources } from "./f76-atx/_acquisitionSources";
 
+import { Crates as EsoCrownCrates } from "./eso-crown-crates/_crates";
+
 import { Categories as F76CampCategories } from "./f76-camp/_categories";
 import { Items as F76CampItems } from "./f76-camp/_items";
 
 import { DB_PATH as LIBRARY_DB_PATH } from "./library/constants";
 import { DB_PATH as F76ATX_DB_PATH, VALID_SORT_ORDERS as F76ATX_VALID_SORT_ORDERS, VALID_ACQUISITION_TYPES as F76ATX_VALID_ACQUISITION_TYPES } from "./f76-atx/constants";
 import { DB_PATH as F76CAMP_DB_PATH, VALID_SORT_ORDERS as F76CAMP_VALID_SORT_ORDERS } from "./f76-camp/constants";
+import { DB_PATH as ESO_CROWN_CRATES_DB_PATH } from "./eso-crown-crates/constants";
 
 const isWindows = process.platform === 'win32';
 const SOCKET_PATH = '/tmp/apiRueso.sock';
@@ -56,8 +59,9 @@ const app = new Elysia()
 
 	// Every section's "last updated" at once: the frontend loads it with any page.
 	.get("/updated", async () => {
-		const [library, f76AtomicShop, f76Camp, glossaryTes, glossaryFallout] = await Promise.all([
+		const [library, esoCrownCrates, f76AtomicShop, f76Camp, glossaryTes, glossaryFallout] = await Promise.all([
 			getFileLastModifiedDate(LIBRARY_DB_PATH),
+			getFileLastModifiedDate(ESO_CROWN_CRATES_DB_PATH),
 			getFileLastModifiedDate(F76ATX_DB_PATH),
 			getFileLastModifiedDate(F76CAMP_DB_PATH),
 			new GlossaryUpdated("tes").getUpdated(),
@@ -66,6 +70,7 @@ const app = new Elysia()
 
 		return {
 			library: { lastModified: library },
+			esoCrownCrates: { lastModified: esoCrownCrates },
 			f76AtomicShop: { lastModified: f76AtomicShop },
 			f76Camp: { lastModified: f76Camp },
 			glossary: { tes: glossaryTes, fallout: glossaryFallout },
@@ -123,6 +128,17 @@ const app = new Elysia()
 		if (!isInteger(params.book_id)) return notFound(set);
 
 		const result = await new Books().getBook(parseInt(params.book_id));
+		return result ?? notFound(set);
+	})
+
+	.get("/eso/crown-crates", async () => {
+		return await new EsoCrownCrates().getCrates();
+	})
+
+	.get("/eso/crown-crates/:crate_id", async ({ params, set }) => {
+		if (!isInteger(params.crate_id)) return notFound(set);
+
+		const result = await new EsoCrownCrates().getCrate(parseInt(params.crate_id));
 		return result ?? notFound(set);
 	})
 

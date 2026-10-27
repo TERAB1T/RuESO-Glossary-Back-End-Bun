@@ -41,11 +41,12 @@ type Snapshot = { createdAt: string; responses: Record<string, string> };
 const db = (name: string) => new Database(join(import.meta.dir, "..", "db", name), { readonly: true });
 const column = (database: Database, sql: string) => database.query(sql).all().map(row => Object.values(row as object)[0] as string);
 
-/** A broad request list: every item linked across the two Fallout DBs, random samples of the rest, every list. */
+/** A broad request list: every item linked across the two Fallout DBs, every crown crate, random samples of the rest, every list. */
 function buildRequestList(): string[] {
 	const atx = db("f76_atx.db");
 	const camp = db("f76_camp.db");
 	const library = db("library.db");
+	const crates = db("eso_crown_crates.db");
 
 	const urls = [
 		...column(atx, "SELECT '/f76/atomicshop/items/' || formId FROM items WHERE campUnlockedItems != ''"),
@@ -53,6 +54,7 @@ function buildRequestList(): string[] {
 		...column(atx, "SELECT '/f76/atomicshop/items/' || formId FROM items ORDER BY random() LIMIT 300"),
 		...column(camp, "SELECT '/f76/camp/items/' || formId FROM items ORDER BY random() LIMIT 300"),
 		...column(library, "SELECT '/library/books/' || id FROM books ORDER BY random() LIMIT 300"),
+		...column(crates, "SELECT '/eso/crown-crates/' || id FROM crates"),
 	];
 
 	for (const order of ["date_desc", "name_asc"]) {
@@ -70,6 +72,7 @@ function buildRequestList(): string[] {
 	urls.push(
 		"/library/categories", "/library/patches", "/library/books?page=3", "/library/books?ids=7147,7148,7149",
 		"/library/books?filter=dragon", "/library/updated",
+		"/eso/crown-crates",
 		"/f76/atomicshop/categories", "/f76/atomicshop/acquisition", "/f76/atomicshop/acquisition/season",
 		"/f76/atomicshop/items?filter=door&has_support=1", "/f76/atomicshop/updated",
 		"/f76/camp/categories", "/f76/camp/items?filter=chair&is_pts=1", "/f76/camp/updated",
@@ -89,6 +92,7 @@ const MUST_404 = [
 	"/f76/atomicshop/categories/deadbeef", "/f76/atomicshop/subcategories/deadbeef",
 	"/f76/camp/categories/deadbeef", "/f76/camp/subcategories/deadbeef",
 	"/f76/atomicshop/acquisition/season/999", "/f76/atomicshop/acquisition/bogus",
+	"/eso/crown-crates/999", "/eso/crown-crates/abc", "/eso/crown-crates/3",
 ];
 
 // Odd but legal input: none of it may end in a 5xx.
