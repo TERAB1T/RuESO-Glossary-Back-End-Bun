@@ -17,10 +17,13 @@ import { Crates as EsoCrownCrates } from "./eso-crown-crates/_crates";
 import { Categories as F76CampCategories } from "./f76-camp/_categories";
 import { Items as F76CampItems } from "./f76-camp/_items";
 
+import { Markers as F76MapMarkers } from "./f76-map/_markers";
+
 import { DB_PATH as LIBRARY_DB_PATH } from "./library/constants";
 import { DB_PATH as F76ATX_DB_PATH, VALID_SORT_ORDERS as F76ATX_VALID_SORT_ORDERS, VALID_ACQUISITION_TYPES as F76ATX_VALID_ACQUISITION_TYPES } from "./f76-atx/constants";
 import { DB_PATH as F76CAMP_DB_PATH, VALID_SORT_ORDERS as F76CAMP_VALID_SORT_ORDERS } from "./f76-camp/constants";
 import { DB_PATH as ESO_CROWN_CRATES_DB_PATH } from "./eso-crown-crates/constants";
+import { DB_PATH as F76MAP_DB_PATH } from "./f76-map/constants";
 
 const isWindows = process.platform === 'win32';
 const SOCKET_PATH = '/tmp/apiRueso.sock';
@@ -59,11 +62,12 @@ const app = new Elysia()
 
 	// Every section's "last updated" at once: the frontend loads it with any page.
 	.get("/updated", async () => {
-		const [library, esoCrownCrates, f76AtomicShop, f76Camp, glossaryTes, glossaryFallout] = await Promise.all([
+		const [library, esoCrownCrates, f76AtomicShop, f76Camp, f76Map, glossaryTes, glossaryFallout] = await Promise.all([
 			getFileLastModifiedDate(LIBRARY_DB_PATH),
 			getFileLastModifiedDate(ESO_CROWN_CRATES_DB_PATH),
 			getFileLastModifiedDate(F76ATX_DB_PATH),
 			getFileLastModifiedDate(F76CAMP_DB_PATH),
+			getFileLastModifiedDate(F76MAP_DB_PATH),
 			new GlossaryUpdated("tes").getUpdated(),
 			new GlossaryUpdated("fallout").getUpdated(),
 		]);
@@ -73,6 +77,7 @@ const app = new Elysia()
 			esoCrownCrates: { lastModified: esoCrownCrates },
 			f76AtomicShop: { lastModified: f76AtomicShop },
 			f76Camp: { lastModified: f76Camp },
+			f76Map: { lastModified: f76Map },
 			glossary: { tes: glossaryTes, fallout: glossaryFallout },
 		};
 	})
@@ -258,6 +263,17 @@ const app = new Elysia()
 	.get("/f76/camp/updated", async () => {
 		const lastModified = await getFileLastModifiedDate(F76CAMP_DB_PATH);
 		return { lastModified };
+	})
+
+	.get("/f76/map/markers", async () => {
+		return await new F76MapMarkers().getMapData();
+	})
+
+	.get("/f76/map/layers/:layer_id", async ({ params, set }) => {
+		if (!/^[a-z0-9-]{1,64}$/.test(params.layer_id)) return notFound(set);
+
+		const result = await new F76MapMarkers().getLayerObjects(params.layer_id);
+		return result ?? notFound(set);
 	})
 
 	//.listen(8000);
