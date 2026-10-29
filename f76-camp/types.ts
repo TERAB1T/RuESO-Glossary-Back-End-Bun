@@ -128,6 +128,7 @@ export interface DisplayInfo {
 
 export type BuffTrigger = 'whileUsing' | 'afterDelay' | 'onActivate' | 'onPassThrough';
 export type BuffCondition = 'noAllyNearby' | 'infatuatedAllyNearby' | 'romanticAllyNearby';
+export type BuffPlayerType = 'human' | 'ghoul';
 
 export interface LocalizedName {
 	en: string | null;
@@ -146,6 +147,7 @@ export interface BuffEffect {
 	duration: number;
 	actorValueFormId: string | null;
 	requiresPerk: BuffRequiredPerk | null;
+	playerType: BuffPlayerType | null;
 }
 
 export interface Buff {
@@ -153,6 +155,7 @@ export interface Buff {
 	name: LocalizedName;
 	trigger: BuffTrigger;
 	delaySeconds: number | null;
+	cooldownSeconds: number | null;
 	condition: BuffCondition | null;
 	diseaseRisk: boolean;
 	effects: BuffEffect[];
