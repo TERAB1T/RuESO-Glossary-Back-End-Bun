@@ -126,7 +126,7 @@ export interface DisplayInfo {
 	excluded: DisplayExcludedEntry[];
 }
 
-export type BuffTrigger = 'whileUsing' | 'afterDelay' | 'onActivate' | 'onPassThrough';
+export type BuffTrigger = 'whileUsing' | 'afterDelay' | 'onActivate' | 'onPassThrough' | 'onDrink';
 export type BuffCondition = 'noAllyNearby' | 'infatuatedAllyNearby' | 'romanticAllyNearby';
 export type BuffPlayerType = 'human' | 'ghoul';
 
@@ -165,6 +165,11 @@ export interface ArcadeGame {
 	name: LocalizedName;
 	description: LocalizedName;
 	pointsDescription: LocalizedName;
+}
+
+export interface WaterSource {
+	collectItem: Omit<GivenItem, 'count'>;
+	collectRadiationDamage: number | null;
 }
 
 export interface RecipeComponent {
@@ -258,6 +263,7 @@ export interface ItemWithRelations extends Item {
 	weather: WeatherInfo | null;
 	buffs: Buff[] | null;
 	arcadeGame: ArcadeGame | null;
+	waterSource: WaterSource | null;
 	unlockedByEntitlements: UnlockedByEntitlement[] | null;
 	shopInfo: ShopInfo | null;
 	sharedLimit: SharedLimit | null;

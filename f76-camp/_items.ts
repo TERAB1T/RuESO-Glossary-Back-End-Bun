@@ -143,7 +143,7 @@ export class Items {
 	}
 
 	async getItem(itemFormId: string): Promise<ItemWithRelations | null> {
-		const item = this.#db.query<Item & { camp: boolean; shelter: boolean; workshop: boolean; campOwned: boolean; campMaxFormId: string | null; campMaxValue: number | null; workshopMaxFormId: string | null; workshopMaxValue: number | null; carryWeight: number | null; requiresPower: boolean; powerRequired: number; powerConnectable: boolean; powerGenerated: number; powerRadiated: number; learnConditions: string | null; produces: string | null; display: string | null; storage: string | null; givesItems: string | null; spoilRate: number | null; surface: 'dirt' | 'water' | null; weather: string | null; buffs: string | null; arcadeGame: string | null; unlockEntitlements: string | null; recipeFormId: string }, [string]>(
+		const item = this.#db.query<Item & { camp: boolean; shelter: boolean; workshop: boolean; campOwned: boolean; campMaxFormId: string | null; campMaxValue: number | null; workshopMaxFormId: string | null; workshopMaxValue: number | null; carryWeight: number | null; requiresPower: boolean; powerRequired: number; powerConnectable: boolean; powerGenerated: number; powerRadiated: number; learnConditions: string | null; produces: string | null; display: string | null; storage: string | null; givesItems: string | null; spoilRate: number | null; surface: 'dirt' | 'water' | null; weather: string | null; buffs: string | null; arcadeGame: string | null; waterSource: string | null; unlockEntitlements: string | null; recipeFormId: string }, [string]>(
 			`SELECT * FROM ${TABLE_NAME_ITEMS} WHERE formId = ?`
 		).get(itemFormId);
 
@@ -195,6 +195,7 @@ export class Items {
 			weather: item.weather ? JSON.parse(item.weather) : null,
 			buffs: item.buffs ? JSON.parse(item.buffs) : null,
 			arcadeGame: item.arcadeGame ? JSON.parse(item.arcadeGame) : null,
+			waterSource: item.waterSource ? JSON.parse(item.waterSource) : null,
 			category: category || null,
 			subcategory: subcategory || null,
 			unlockedByEntitlements: this.#resolveUnlockedByEntitlements(unlockEntitlements),
