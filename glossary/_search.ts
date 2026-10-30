@@ -8,6 +8,9 @@ import {
 import { escapeQuery, prepareHtml } from "../utils";
 
 const MAX_LENGTH = 200;
+// The cost of an FTS phrase grows with its length: ~0.5 s of the single API thread for a 1200-character one.
+// The frontend inputs have the same maxlength.
+const MAX_SEARCH_LENGTH = 200;
 
 // Without a search term or column filters the total depends only on the DB file and the selected
 // games, and counting all ~900k rows takes ~230 ms — paid on every visit to the glossary page.
@@ -45,9 +48,9 @@ export class GlossarySearch {
 		this.#draw = query.draw || '1';
 		this.#start = Math.max(parseInt(query.start) || 0, 0);
 		this.#length = Math.min(Math.max(parseInt(query.length) || 10, 1), MAX_LENGTH);
-		this.#searchValue = query["search[value]"] || "";
+		this.#searchValue = (query["search[value]"] || "").slice(0, MAX_SEARCH_LENGTH);
 		this.#games = this.#validateGames(requestedGames.map(g => serverGames[g]?.[0] ?? g));
-		this.#filters = COLUMNS.map((_, index) => query[`columns[${index}][search][value]`] || '');
+		this.#filters = COLUMNS.map((_, index) => (query[`columns[${index}][search][value]`] || '').slice(0, MAX_SEARCH_LENGTH));
 
 		this.#orderDir = (query["order[0][dir]"] || 'asc').toUpperCase();
 
