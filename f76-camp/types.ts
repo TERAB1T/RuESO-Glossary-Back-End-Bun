@@ -380,4 +380,5 @@ export interface SubItem {
 	value: number | null;
 	details: SubItemDetails | null;
 	usedIn: RecipeSiblingItem[];
+	teaches: RecipeSiblingItem[];
 }

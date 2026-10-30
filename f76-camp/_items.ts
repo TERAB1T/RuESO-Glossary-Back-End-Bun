@@ -323,7 +323,7 @@ export class Items {
 
 	// An item listed in collector and storage tables (collector output, candy bowl), with the C.A.M.P. objects that list it.
 	async getSubItem(formId: string): Promise<SubItem | null> {
-		const row = this.#db.query<Omit<SubItem, 'details' | 'usedIn'> & { details: string | null; usedIn: string }, [string]>(
+		const row = this.#db.query<Omit<SubItem, 'details' | 'usedIn' | 'teaches'> & { details: string | null; usedIn: string }, [string]>(
 			`SELECT formId, editorId, formType, type, nameEn, nameRu, descriptionEn, descriptionRu, weight, value, details, usedIn
 		FROM ${TABLE_NAME_SUBITEMS}
 		WHERE formId = ?`
@@ -340,7 +340,18 @@ export class Items {
 		ORDER BY MIN(i.orderByName)`
 		).all(row.usedIn);
 
-		return { ...row, details: row.details ? JSON.parse(row.details) : null, usedIn };
+		// A plan or recipe unlocks the C.A.M.P. items whose learn conditions name it.
+		const teaches = row.type === 'RECIPE'
+			? this.#db.query<RecipeSiblingItem, [string]>(
+				`SELECT formId, nameEn, nameRu, slug
+		FROM ${TABLE_NAME_ITEMS}
+		WHERE learnConditions LIKE ?
+		GROUP BY formId
+		ORDER BY MIN(orderByName)`
+			).all(`%{"type":"plan","formId":"0x${row.formId}"%`)
+			: [];
+
+		return { ...row, details: row.details ? JSON.parse(row.details) : null, usedIn, teaches };
 	}
 
 	#resolveRecipeItems(recipeFormId: string, excludeFormId: string): RecipeSiblingItem[] {
