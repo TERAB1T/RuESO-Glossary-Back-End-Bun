@@ -126,7 +126,7 @@ export interface DisplayInfo {
 	excluded: DisplayExcludedEntry[];
 }
 
-export type BuffTrigger = 'whileUsing' | 'afterDelay' | 'onActivate' | 'onPassThrough' | 'onDrink';
+export type BuffTrigger = 'whileUsing' | 'afterDelay' | 'onActivate' | 'onPassThrough' | 'onDrink' | 'fromAlly';
 export type BuffCondition = 'noAllyNearby' | 'infatuatedAllyNearby' | 'romanticAllyNearby';
 export type BuffPlayerType = 'human' | 'ghoul';
 
@@ -213,6 +213,26 @@ export interface Ally {
 	stock: AllyStockRow[] | null;
 	hasRomance: boolean;
 	vendorVisitors: AllyVendorVisitor[];
+	buffs: AllyBuffs | null;
+}
+
+export type AllyBuffMode = 'single' | 'random' | 'timeOfDay' | 'payment' | 'services';
+
+export interface AllyBuffPayment {
+	formId: string;
+	en: string | null;
+	ru: string | null;
+}
+
+export interface AllyBuffOption {
+	buff: Buff;
+	timeOfDay: 'day' | 'night' | null;
+	payment: AllyBuffPayment[] | null;
+}
+
+export interface AllyBuffs {
+	mode: AllyBuffMode;
+	options: AllyBuffOption[];
 }
 
 export interface RecipeComponent {
