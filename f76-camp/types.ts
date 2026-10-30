@@ -189,6 +189,7 @@ export interface AllyStockItem {
 	en: string | null;
 	ru: string | null;
 	type: string | null;
+	value: number | null;
 	probability: number;
 	eventOnly: boolean;
 	byRegion: boolean;
@@ -207,6 +208,7 @@ export interface Ally {
 	npcFormId: string;
 	editorId: string;
 	name: LocalizedName;
+	female: boolean;
 	isVendor: boolean;
 	stock: AllyStockRow[] | null;
 	hasRomance: boolean;
