@@ -40,6 +40,43 @@ export interface Item {
 	orderByFormId: number;
 }
 
+/** A row of the items table as SQLite returns it: BOOLEAN columns as 0/1, JSON columns as text. */
+export interface ItemRow extends Item {
+	camp: number;
+	shelter: number;
+	workshop: number;
+	campOwned: number;
+	campMaxFormId: string | null;
+	campMaxValue: number | null;
+	workshopMaxFormId: string | null;
+	workshopMaxValue: number | null;
+	carryWeight: number | null;
+	requiresPower: number;
+	powerRequired: number;
+	powerConnectable: number;
+	powerGenerated: number;
+	powerRadiated: number;
+	learnConditions: string | null;
+	produces: string | null;
+	display: string | null;
+	storage: string | null;
+	givesItems: string | null;
+	spoilRate: number | null;
+	surface: 'dirt' | 'water' | null;
+	weather: string | null;
+	buffs: string | null;
+	arcadeGame: string | null;
+	waterSource: string | null;
+	ally: string | null;
+	unlockEntitlements: string | null;
+	shopEntitlementFormId: string | null;
+	shopDescriptionEn: string | null;
+	shopDescriptionRu: string | null;
+	shopIsSet: number;
+	hideRecipeDescription: number;
+	recipeFormId: string;
+}
+
 export interface PaginationInfo {
 	page: number;
 	page_size: number;

@@ -11,6 +11,7 @@ import type {
 	Category,
 	Subcategory,
 	Item,
+	ItemRow,
 	ItemsResponse,
 	ItemWithRelations,
 	UnlockedByEntitlement,
@@ -43,81 +44,8 @@ interface RecipeRow {
 	components: string | null;
 }
 
-interface ShopRow {
-	formId: string;
-	descriptionEn: string | null;
-	descriptionRu: string | null;
-	screenshots: string | null;
-	campUnlockedItems: string | null;
-}
-
 // Groups sharing a limit reach 530 items, and listing them all would bury the page; larger groups get a per-category breakdown instead.
 const SHARED_LIMIT_LIST_MAX = 100;
-
-// Recipes of collectors whose description only says what they produce, which the production block shows in full.
-// Interim list: descriptions of other collectors hold placement rules ("only on dirt", "on a deposit") and stay.
-const RECIPES_DESCRIBED_BY_PRODUCES = new Set([
-	'006f7e7d', '006d342e', '006f7e8a', '00691c00', '008d2af8', '008fae0a', '0068e77a', '00773e1f',
-	'007813f7', '0067adbf', '0067f3aa', '00662e68', '0075fbee', '006f0685', '007df844', '008f10dd',
-	'005fe789', '007ae26d', '007ae26e', '007ae26f', '0076d045',
-]);
-
-// Already shown by the item's own data. The English line is always the same and the Russian one is found by its index;
-// a few texts have the Russian lines in a different order, so the Russian line is also matched as is.
-const SHELTER_BAN_LINE_EN = 'This item cannot be built inside of a Shelter.';
-const SHELTER_BAN_LINE_RU = 'Этот предмет нельзя изготовить в укрытии.';
-
-// Recipes whose description repeats a line of the shop text ("Changes weather within C.A.M.P. radius when powered.", the sink's "will dispense water").
-const RECIPES_DESCRIBED_BY_SHOP_TEXT = new Set(['006ee8ed', '005771b5', '007ae545']);
-
-// Recipe descriptions that are not shown at all.
-const RECIPES_WITH_HIDDEN_DESCRIPTION = new Set(['0042f115']);
-
-// Recipe descriptions that only state the surface rule, which the page now builds from the item's surface (matched by the English text).
-const SURFACE_RULE_DESCRIPTIONS_EN = new Set([
-	'Can only be placed in dirt.', 'Must be placed in dirt.', 'Can only be placed in water.', 'Must be placed in the water.',
-]);
-
-// The shop texts of repair stations describe the same behaviour in several ways; every variant (matched by the English line)
-// is replaced with one wording, in the same position in both languages.
-const REPAIR_STATION_RECIPE = '007ae545';
-const REPAIR_NOTE_LINES_EN = new Set([
-	'Does not repair destroyed C.A.M.P. objects.',
-	'Repairs damaged C.A.M.P. objects but cannot rebuild objects that have been completed destroyed.',
-]);
-const REPAIR_NOTE = {
-	en: 'Restores health to damaged C.A.M.P. objects over time but cannot rebuild objects that have been completed destroyed.',
-	ru: 'Постепенно ремонтирует поврежденные объекты в C.A.M.P., но не восстанавливает полностью уничтоженные объекты.',
-};
-
-function replaceRepairNote(info: ShopInfo | null): void {
-	if (!info?.descriptionEn || !info.descriptionRu) return;
-	const enLines = info.descriptionEn.split('\n');
-	const ruLines = info.descriptionRu.split('\n');
-	if (enLines.length !== ruLines.length) return;
-	const i = enLines.findIndex(line => REPAIR_NOTE_LINES_EN.has(line.trim()));
-	if (i < 0) return;
-	enLines[i] = REPAIR_NOTE.en;
-	ruLines[i] = REPAIR_NOTE.ru;
-	info.descriptionEn = enLines.join('\n');
-	info.descriptionRu = ruLines.join('\n');
-}
-
-const isWarningLine =(line: string) => line.startsWith('-') && line.endsWith('-');
-
-// Shop descriptions carry technical notes like "- C.A.M.P. ITEMS APPEAR WHILE IN C.A.M.P. MODE. -".
-// The Russian text often lacks the dashes, but both languages have the same line layout, so a line
-// is dropped when either language marks it. If the layouts differ, each language is judged alone.
-function cleanShopDescriptions(en: string | null, ru: string | null): { en: string | null; ru: string | null } {
-	const enLines = en?.split('\n').map(line => line.trim());
-	const ruLines = ru?.split('\n').map(line => line.trim());
-	const aligned = !!enLines && !!ruLines && enLines.length === ruLines.length;
-
-	const clean = (lines: string[] | undefined, other: string[] | undefined) =>
-		lines?.filter((line, i) => !isWarningLine(line) && !(aligned && isWarningLine(other![i])) && line !== SHELTER_BAN_LINE_EN && line !== SHELTER_BAN_LINE_RU && !(aligned && other![i] === SHELTER_BAN_LINE_EN)).join('\n').replace(/\n{3,}/g, '\n\n').trim() || null;
-
-	return { en: clean(enLines, ruLines), ru: clean(ruLines, enLines) };
-}
 
 export class Items {
 	#db: Database;
@@ -143,7 +71,7 @@ export class Items {
 	}
 
 	async getItem(itemFormId: string): Promise<ItemWithRelations | null> {
-		const item = this.#db.query<Item & { camp: boolean; shelter: boolean; workshop: boolean; campOwned: boolean; campMaxFormId: string | null; campMaxValue: number | null; workshopMaxFormId: string | null; workshopMaxValue: number | null; carryWeight: number | null; requiresPower: boolean; powerRequired: number; powerConnectable: boolean; powerGenerated: number; powerRadiated: number; learnConditions: string | null; produces: string | null; display: string | null; storage: string | null; givesItems: string | null; spoilRate: number | null; surface: 'dirt' | 'water' | null; weather: string | null; buffs: string | null; arcadeGame: string | null; waterSource: string | null; ally: string | null; unlockEntitlements: string | null; recipeFormId: string }, [string]>(
+		const item = this.#db.query<ItemRow, [string]>(
 			`SELECT * FROM ${TABLE_NAME_ITEMS} WHERE formId = ?`
 		).get(itemFormId);
 
@@ -164,20 +92,17 @@ export class Items {
 			).get(item.subcategoryFormId)
 			: null;
 
-		const { unlockEntitlements, ...itemWithoutRawEntitlements } = item;
+		const { unlockEntitlements, shopEntitlementFormId, shopDescriptionEn, shopDescriptionRu, shopIsSet, hideRecipeDescription, ...itemWithoutRawFields } = item;
 
-		// The recipe description is the page's lead text; drop it where a block below already says the same.
+		// The parser decides where the recipe description, the page's lead text, repeats a block below.
 		const recipe = item.recipeFormId ? this.#resolveRecipe(item.recipeFormId) : null;
-		const shopInfo = this.#resolveShopInfo(unlockEntitlements);
-		if (item.recipeFormId === REPAIR_STATION_RECIPE) replaceRepairNote(shopInfo);
-		if (recipe && ((RECIPES_DESCRIBED_BY_SHOP_TEXT.has(item.recipeFormId) && (shopInfo?.descriptionRu || shopInfo?.descriptionEn)) || item.storage || RECIPES_DESCRIBED_BY_PRODUCES.has(item.recipeFormId) || RECIPES_WITH_HIDDEN_DESCRIPTION.has(item.recipeFormId)
-			|| (item.surface && SURFACE_RULE_DESCRIPTIONS_EN.has(recipe.descriptionEn?.trim() ?? '')))) {
+		if (recipe && hideRecipeDescription) {
 			recipe.descriptionEn = null;
 			recipe.descriptionRu = null;
 		}
 
 		return {
-			...itemWithoutRawEntitlements,
+			...itemWithoutRawFields,
 			// SQLite stores BOOLEAN columns as 0/1.
 			camp: !!item.camp,
 			shelter: !!item.shelter,
@@ -200,7 +125,7 @@ export class Items {
 			category: category || null,
 			subcategory: subcategory || null,
 			unlockedByEntitlements: this.#resolveUnlockedByEntitlements(unlockEntitlements),
-			shopInfo,
+			shopInfo: this.#resolveShopInfo(shopEntitlementFormId, shopDescriptionEn, shopDescriptionRu, !!shopIsSet),
 			sharedLimit: this.#resolveSharedLimit(item.campMaxFormId, item.formId),
 			recipe,
 			recipeItems: item.recipeFormId ? this.#resolveRecipeItems(item.recipeFormId, item.formId) : []
@@ -234,30 +159,14 @@ export class Items {
 		}));
 	}
 
-	#resolveShopInfo(raw: string | null): ShopInfo | null {
-		const formIds = raw?.split('|').filter(Boolean) ?? [];
-		if (formIds.length === 0) return null;
+	// The parser picks the shop entitlement and cleans its text; only the screenshots come from the Atomic Shop DB.
+	#resolveShopInfo(formId: string | null, en: string | null, ru: string | null, isSet: boolean): ShopInfo | null {
+		if (!formId) return null;
 
-		const placeholders = formIds.map(() => '?').join(',');
-
-		const rows = getDb(ATX_DB_PATH).query<ShopRow, string[]>(
-			`SELECT formId, descriptionEn, descriptionRu, screenshots, campUnlockedItems
-			FROM ${ATX_TABLE_NAME_ITEMS}
-			WHERE formId IN (${placeholders})`
-		).all(...formIds);
-
-		if (rows.length === 0) return null;
-
-		const campItemCount = (row: ShopRow) => row.campUnlockedItems?.split('|').filter(Boolean).length ?? 0;
-
-		// Several entitlements can unlock one item: a generic box plus its skin. The one covering the fewest
-		// C.A.M.P. items is the most specific; on a tie the first in unlock order wins.
-		const [best] = rows.sort((a, b) =>
-			campItemCount(a) - campItemCount(b) || formIds.indexOf(a.formId) - formIds.indexOf(b.formId)
-		);
-
-		const { en, ru } = cleanShopDescriptions(best.descriptionEn, best.descriptionRu);
-		const screenshots = best.screenshots?.split(';').filter(Boolean) ?? [];
+		const row = getDb(ATX_DB_PATH).query<{ screenshots: string | null }, [string]>(
+			`SELECT screenshots FROM ${ATX_TABLE_NAME_ITEMS} WHERE formId = ?`
+		).get(formId);
+		const screenshots = row?.screenshots?.split(';').filter(Boolean) ?? [];
 
 		if (!en && !ru && screenshots.length === 0) return null;
 
@@ -265,7 +174,7 @@ export class Items {
 			descriptionEn: en,
 			descriptionRu: ru,
 			screenshots: screenshots.length > 0 ? screenshots : null,
-			isSet: campItemCount(best) > 1
+			isSet
 		};
 	}
 
