@@ -272,7 +272,25 @@ const app = new Elysia()
 	.get("/f76/map/layers/:layer_id", async ({ params, set }) => {
 		if (!/^[a-z0-9-]{1,64}$/.test(params.layer_id)) return notFound(set);
 
-		const result = await new F76MapMarkers().getLayerObjects(params.layer_id);
+		const result = await new F76MapMarkers().getLayer(params.layer_id);
+		return result ?? notFound(set);
+	})
+
+	.get("/f76/map/items", async () => {
+		return await new F76MapMarkers().getItemCatalog();
+	})
+
+	.get("/f76/map/items/:item_id/points", async ({ params, set }) => {
+		if (!isHex(params.item_id)) return notFound(set);
+
+		const result = await new F76MapMarkers().getItemPoints(params.item_id);
+		return result ?? notFound(set);
+	})
+
+	.get("/f76/map/components/:component_id/points", async ({ params, set }) => {
+		if (!isHex(params.component_id)) return notFound(set);
+
+		const result = await new F76MapMarkers().getComponentPoints(params.component_id);
 		return result ?? notFound(set);
 	})
 
