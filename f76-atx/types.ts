@@ -60,6 +60,8 @@ export interface Item {
 	mainImage: string | null;
 	screenshots: string | string[] | null;
 	video: string | null;
+	videoThumbnail: string | null;
+	videoUploadDate: string | null;
 	categoryFormId: string | null;
 	subcategoryFormId: string | null;
 	isPTS: boolean | null;
