@@ -64,6 +64,7 @@ export interface ItemRow extends Item {
 	spoilRate: number | null;
 	surface: 'dirt' | 'water' | null;
 	weather: string | null;
+	budget: number | null;
 	buffs: string | null;
 	arcadeGame: string | null;
 	waterSource: string | null;
@@ -361,6 +362,10 @@ export interface ItemWithRelations extends Item {
 	spoilRate: number | null;
 	surface: 'dirt' | 'water' | null;
 	weather: WeatherInfo | null;
+	// In flamingo units (fWorkshopBudgetBaseCost); null for wallpapers.
+	budget: number | null;
+	// The whole C.A.M.P. budget in the same units.
+	campBudgetLimit: number | null;
 	buffs: Buff[] | null;
 	arcadeGame: ArcadeGame | null;
 	waterSource: WaterSource | null;

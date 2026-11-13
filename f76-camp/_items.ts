@@ -118,6 +118,8 @@ export class Items {
 			spoilRate: item.spoilRate ?? null,
 			surface: item.surface ?? null,
 			weather: item.weather ? JSON.parse(item.weather) : null,
+			budget: item.budget ?? null,
+			campBudgetLimit: this.#campBudgetLimit(),
 			buffs: item.buffs ? JSON.parse(item.buffs) : null,
 			arcadeGame: item.arcadeGame ? JSON.parse(item.arcadeGame) : null,
 			waterSource: item.waterSource ? JSON.parse(item.waterSource) : null,
@@ -130,6 +132,13 @@ export class Items {
 			recipe,
 			recipeItems: item.recipeFormId ? this.#resolveRecipeItems(item.recipeFormId, item.formId) : []
 		};
+	}
+
+	#campBudgetLimit(): number | null {
+		const row = this.#db.query<{ value: string }, []>(
+			`SELECT value FROM meta WHERE key = 'campBudgetLimit'`
+		).get();
+		return row ? Number(row.value) : null;
 	}
 
 	#resolveUnlockedByEntitlements(raw: string | null): UnlockedByEntitlement[] | null {
