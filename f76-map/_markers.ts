@@ -30,7 +30,7 @@ export class Markers {
 		).all();
 
 		const markers = this.#db.query<MarkerRow, []>(
-			`SELECT formId, kind, icon, nameEn, nameRu, regionFormId, mapX, mapY, x, y, isPts, initiallyDisabled
+			`SELECT formId, kind, icon, nameEn, nameRu, regionFormId, mapX, mapY, x, y, isPts, initiallyDisabled, textColor, backgroundColor
 			FROM ${TABLE_NAME_MARKERS} ORDER BY nameRu`
 		).all().map(m => ({ ...m, isPts: m.isPts === 1, initiallyDisabled: m.initiallyDisabled === 1 }));
 

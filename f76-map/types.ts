@@ -21,6 +21,9 @@ export interface MapMarker {
 	y: number;
 	isPts: boolean;
 	initiallyDisabled: boolean;
+	// Region label colors from the game's settings (#rrggbb): text and the band behind it; null for location markers.
+	textColor: string | null;
+	backgroundColor: string | null;
 }
 
 // A layer of points (collectible spawns, vendors) or of areas (C.A.M.P. zones); its contents are loaded separately.
